@@ -34,7 +34,7 @@ class EducationItem(BaseModel):
 
 
 class CandidateResume(BaseModel):
-    resume_name: Optional[str] = Field(default="Candidate Resume", description="Concise resume name")
+    resume_name: Optional[str] = Field(default="Rohan Phulkar", description="Candidate resume name (optional role suffix)")
     personal: PersonalInfo = Field(default_factory=PersonalInfo)
     summary: str = Field(default="", description="2-3 sentence ATS-aligned professional summary")
     skills: Union[List[str], Dict[str, Any]] = Field(default_factory=list, description="Technical skills list or categorized map")

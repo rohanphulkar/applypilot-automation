@@ -113,7 +113,8 @@ The candidate profile provided in MASTER CANDIDATE DATA must be strictly preserv
 - Never invent additional employers.
 - Never invent promotions.
 - Never invent responsibilities or management experience.
-- Never invent metrics, certifications, or degrees.
+- Never invent metrics, certifications, degrees, or projects.
+- If a section (e.g. projects, education, or experience) in MASTER CANDIDATE DATA is empty (such as "projects": []), keep it strictly empty as [] and NEVER fabricate or invent entries for it.
 
 =========================================================
 9. ATS TAILORING STRATEGY
@@ -149,8 +150,8 @@ Bad: "Backend Engineer | Python • FastAPI • PostgreSQL • Django • REST A
 11. RESUME NAME
 =========================================================
 
-Use: "[Candidate Name] - [Target Role]"
-Example: "Rohan Phulkar - Backend Engineer"
+The candidate resume name is "Rohan Phulkar" (an optional suffix of the role such as "Rohan Phulkar - [Target Role]" can be included, but keeping it simply "Rohan Phulkar" is also preferred).
+Example: "Rohan Phulkar" or "Rohan Phulkar - Backend Engineer"
 
 =========================================================
 12. SUMMARY
@@ -162,10 +163,14 @@ Write a concise 2-3 sentence professional summary.
 - Include important ATS keywords naturally without keyword stuffing.
 
 =========================================================
-13. SKILLS
+13. SKILLS — RELATABLE & ATS-ALIGNED TO JOB DESCRIPTION
 =========================================================
 
-Return a flat array of technical skills relevant to the role based on candidate's real experience.
+Extract and return an ATS-optimized list of 10-16 technical skills strictly drawn from the candidate's authentic background (MASTER CANDIDATE DATA) that are directly relatable, relevant, and complementary to the target job description:
+- Prioritize exact keywords and required technologies specified in the job posting that the candidate possesses (e.g. if the job demands Python, FastAPI, and PostgreSQL, place those first).
+- Include supporting and complementary technologies and concepts from the candidate's authentic experience (e.g., REST APIs, Redis, Database Architecture, Query Optimization, Docker, AWS, CI/CD, Authentication, Microservices) that reinforce the candidate's qualification for the specific role.
+- OMIT technologies from the candidate's master profile that are unrelated, conflicting, or irrelevant to this target job (for example: do not include Node.js or Django for a dedicated FastAPI job unless explicitly relevant; do not include frontend technologies for a pure backend role).
+- Ensure every listed skill is authentic to the candidate, directly relatable to the job posting, and ordered by importance to maximize ATS score.
 
 =========================================================
 14. EXPERIENCE TAILORING
@@ -234,7 +239,19 @@ Use strictly this JSON output structure:
     "skills": [
       "Python",
       "FastAPI",
-      "PostgreSQL"
+      "PostgreSQL",
+      "REST APIs",
+      "Redis",
+      "Database Architecture",
+      "Query Optimization",
+      "Docker",
+      "AWS",
+      "CI/CD (GitHub Actions)",
+      "Microservices",
+      "Distributed Systems",
+      "Scalable Architecture",
+      "Authentication",
+      "Authorization"
     ],
     "experience": [
       {

@@ -110,7 +110,7 @@ def _load_local_master_file() -> Dict[str, Any]:
             logger.error("Error reading local master resume from %s: %s", path, e)
 
     return {
-        "resume_name": "Rohan Phulkar - Backend Engineer",
+        "resume_name": "Rohan Phulkar",
         "personal": {
             "name": "Rohan Phulkar",
             "title": "Backend Engineer",

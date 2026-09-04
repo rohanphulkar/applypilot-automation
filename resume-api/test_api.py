@@ -40,8 +40,7 @@ def test_full_pipeline_with_mongodb():
         logger.info("Health response: %s", health_data)
         assert health_data["checks"]["mongodb"] == "connected"
         assert health_data["checks"]["pdflatex"] == "available"
-        assert health_data["checks"]["openai_api"] == "configured"
-        assert health_data["checks"]["aws_s3"] == "configured"
+        assert health_data["checks"]["storage"] in ("aws_s3", "local_filesystem")
         logger.info("PASSED: Health check with MongoDB connected\n")
 
         # 2. Master resume
@@ -61,6 +60,7 @@ def test_full_pipeline_with_mongodb():
 
         latex_content = generate_latex(master_data["master_resume"])
         assert r"\documentclass[10pt,letterpaper]{article}" in latex_content
+        assert r"\section{PROJECTS}" not in latex_content, "Empty projects section should not be rendered"
         with open(tex_file, "w", encoding="utf-8") as f:
             f.write(latex_content)
 

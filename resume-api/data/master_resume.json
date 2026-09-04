@@ -1,5 +1,5 @@
 {
-  "resume_name": "Rohan Phulkar - Backend Engineer",
+  "resume_name": "Rohan Phulkar",
   "personal": {
     "name": "Rohan Phulkar",
     "title": "Backend Engineer",
@@ -14,21 +14,27 @@
     "FastAPI",
     "Django",
     "Node.js",
+    "JavaScript",
     "REST APIs",
+    "Microservices",
     "PostgreSQL",
     "MySQL",
+    "NoSQL",
     "Redis",
     "Database Architecture",
     "Query Optimization",
+    "SQL Indexing",
     "Docker",
     "AWS",
     "CI/CD (GitHub Actions)",
+    "Git",
     "Prometheus",
     "Grafana",
     "Distributed Systems",
     "Scalable Architecture",
     "Authentication",
     "Authorization",
+    "RBAC",
     "Identity Management"
   ],
   "experience": [
@@ -61,7 +67,12 @@
         "Ensured data protection and regulatory compliance across the platform.",
         "Utilized Docker for backend application containerization."
       ],
-      "tech_stack": ["Python", "FastAPI", "PostgreSQL", "Docker"]
+      "tech_stack": [
+        "Python",
+        "FastAPI",
+        "PostgreSQL",
+        "Docker"
+      ]
     },
     {
       "company": "Hysus",
@@ -73,7 +84,13 @@
         "Built secure authentication and authorization systems.",
         "Delivered scalable backend solutions across healthcare, education, and SaaS sectors."
       ],
-      "tech_stack": ["Django", "FastAPI", "Node.js", "PostgreSQL", "MySQL"]
+      "tech_stack": [
+        "Django",
+        "FastAPI",
+        "Node.js",
+        "PostgreSQL",
+        "MySQL"
+      ]
     },
     {
       "company": "Srijcon",
@@ -83,7 +100,11 @@
         "Developed backend services using Django and MySQL, creating scalable REST APIs.",
         "Optimized SQL queries and database indexing to improve platform performance and response times."
       ],
-      "tech_stack": ["Django", "MySQL", "REST APIs"]
+      "tech_stack": [
+        "Django",
+        "MySQL",
+        "REST APIs"
+      ]
     }
   ],
   "projects": [],

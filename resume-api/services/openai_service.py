@@ -112,6 +112,20 @@ def tailor_resume_with_openai(
         if not candidate or not isinstance(candidate, dict):
             logger.warning("OpenAI response did not contain 'candidate' object, using fallback.")
             parsed["candidate"] = master_resume_data
+        else:
+            # Clean and de-duplicate tailored skills curated for the specific job description
+            tailored_skills = candidate.get("skills", [])
+            if isinstance(tailored_skills, list) and tailored_skills:
+                seen_lower = set()
+                cleaned_skills = []
+                for s in tailored_skills:
+                    s_str = str(s).strip()
+                    if s_str and s_str.lower() not in seen_lower:
+                        seen_lower.add(s_str.lower())
+                        cleaned_skills.append(s_str)
+                candidate["skills"] = cleaned_skills
+            else:
+                candidate["skills"] = master_resume_data.get("skills", [])
 
         return parsed
 

@@ -88,41 +88,9 @@ LATEX_TEMPLATE = r"""
 
 \begin{document}
 
-% ---------- Header ----------
-\resumeHeader{__NAME__}
+__HEADER__
 
-\begin{center}
-    \textbf{__TITLE__}
-\end{center}
-
-\contactLine{
-__CONTACTS__
-}
-
-% ---------- Summary ----------
-\section{SUMMARY}
-
-__SUMMARY__
-
-% ---------- Skills ----------
-\section{SKILLS \& CORE COMPETENCIES}
-
-__SKILLS__
-
-% ---------- Experience ----------
-\section{EXPERIENCE}
-
-__EXPERIENCE__
-
-% ---------- Projects ----------
-\section{PROJECTS}
-
-__PROJECTS__
-
-% ---------- Education ----------
-\section{EDUCATION}
-
-__EDUCATION__
+__BODY__
 
 \end{document}
 """
@@ -324,29 +292,72 @@ def build_skills(skills: Union[List[Any], Dict[str, Any], str]) -> str:
     if not skills:
         return ""
 
-    items: List[str] = []
-
-    def _extract(val: Any):
-        if isinstance(val, dict):
-            s_name = val.get("skill") or val.get("name")
-            if s_name and isinstance(s_name, str):
-                items.append(escape_latex(s_name))
+    if isinstance(skills, dict):
+        lines = []
+        for cat, items in skills.items():
+            cat_label = escape_latex(str(cat).replace("_", " ").title())
+            if isinstance(items, list):
+                skill_str = ", ".join(escape_latex(str(s).strip()) for s in items if str(s).strip())
+            elif isinstance(items, dict):
+                nested = []
+                for sub in items.values():
+                    if isinstance(sub, list):
+                        nested.extend(escape_latex(str(x).strip()) for x in sub if str(x).strip())
+                    elif sub:
+                        nested.append(escape_latex(str(sub).strip()))
+                skill_str = ", ".join(nested)
             else:
-                for sub in val.values():
-                    _extract(sub)
-        elif isinstance(val, list):
-            for sub in val:
-                _extract(sub)
-        elif val:
-            s_str = str(val).strip()
-            if s_str:
-                items.append(escape_latex(s_str))
+                skill_str = escape_latex(str(items).strip())
 
-    if isinstance(skills, (dict, list)):
-        _extract(skills)
+            if skill_str:
+                lines.append(rf"\textbf{{{cat_label}:}} {skill_str}")
+        if lines:
+            return "\\\\\n".join(lines)
+        return ""
+
+    if isinstance(skills, list):
+        items: List[str] = []
+        for s in skills:
+            if isinstance(s, dict):
+                val = s.get("skill") or s.get("name") or str(s)
+                if val and str(val).strip():
+                    items.append(escape_latex(str(val).strip()))
+            elif s and str(s).strip():
+                items.append(escape_latex(str(s).strip()))
         return ", ".join(items)
-    else:
-        return escape_latex(str(skills))
+
+    return escape_latex(str(skills).strip())
+
+
+def build_header(personal: Dict[str, Any], data: Dict[str, Any]) -> str:
+    name = escape_latex(personal.get("name", "") or data.get("name", "")).strip()
+    title = format_title(personal.get("title", "") or data.get("title", "")).strip()
+    contacts = build_contacts(personal).strip()
+
+    blocks = []
+    if name:
+        blocks.append(f"% ---------- Header ----------\n\\resumeHeader{{{name}}}")
+    if title:
+        blocks.append(f"\\begin{{center}}\n    \\textbf{{{title}}}\n\\end{{center}}")
+    if contacts:
+        blocks.append(f"\\contactLine{{\n{contacts}\n}}")
+    return "\n\n".join(blocks)
+
+
+def build_summary_section(summary: Any) -> str:
+    if not summary:
+        return ""
+    text = escape_latex(summary).strip()
+    if not text:
+        return ""
+    return f"% ---------- Summary ----------\n\\section{{SUMMARY}}\n\n{text}"
+
+
+def build_skills_section(skills: Any) -> str:
+    skills_text = build_skills(skills).strip()
+    if not skills_text:
+        return ""
+    return f"% ---------- Skills ----------\n\\section{{SKILLS \\& CORE COMPETENCIES}}\n\n{skills_text}"
 
 
 def build_experience(experience: List[Dict[str, Any]]) -> str:
@@ -358,32 +369,44 @@ def build_experience(experience: List[Dict[str, Any]]) -> str:
         if not isinstance(job, dict):
             continue
 
-        company = escape_latex(job.get("company", ""))
-        dates = escape_latex(job.get("dates", ""))
-        role = escape_latex(job.get("role", ""))
+        company = escape_latex(job.get("company", "")).strip()
+        dates = escape_latex(job.get("dates", "")).strip()
+        role = escape_latex(job.get("role", "")).strip()
+        bullets = job.get("bullets", [])
+        tech_stack = job.get("tech_stack", [])
+
+        bullet_items = [escape_latex(b).strip() for b in bullets if str(b).strip()] if isinstance(bullets, list) else []
+        tech_items = [escape_latex(t).strip() for t in tech_stack if str(t).strip()] if isinstance(tech_stack, list) else []
+
+        if not company and not dates and not role and not bullet_items and not tech_items:
+            continue
 
         lines = [
             rf"\experienceHeading{{{company}}}{{{dates}}}{{{role}}}",
-            "",
-            r"\begin{itemize}",
         ]
 
-        bullets = job.get("bullets", [])
-        if isinstance(bullets, list):
-            for bullet in bullets:
-                lines.append(f"    \\item {escape_latex(bullet)}")
+        if bullet_items:
+            lines.append("")
+            lines.append(r"\begin{itemize}")
+            for bullet in bullet_items:
+                lines.append(f"    \\item {bullet}")
+            lines.append(r"\end{itemize}")
 
-        lines.append(r"\end{itemize}")
-
-        tech_stack = job.get("tech_stack", [])
-        if tech_stack and isinstance(tech_stack, list):
-            tech = ", ".join(escape_latex(item) for item in tech_stack)
+        if tech_items:
+            tech = ", ".join(tech_items)
             lines.append("")
             lines.append(rf"\textit{{Tech Stack: {tech}}}")
 
         jobs.append("\n".join(lines))
 
     return "\n\n\\vspace{5pt}\n\n".join(jobs)
+
+
+def build_experience_section(experience: Any) -> str:
+    exp_text = build_experience(experience).strip()
+    if not exp_text:
+        return ""
+    return f"% ---------- Experience ----------\n\\section{{EXPERIENCE}}\n\n{exp_text}"
 
 
 def build_projects(projects: List[Dict[str, Any]]) -> str:
@@ -395,32 +418,43 @@ def build_projects(projects: List[Dict[str, Any]]) -> str:
         if not isinstance(project, dict):
             continue
 
-        p_name = escape_latex(project.get("name", ""))
+        p_name = escape_latex(project.get("name", "")).strip()
         p_url = project.get("url")
-        if p_url:
-            p_name = rf"\textbf{{{p_name}}} ({format_url(p_url)})"
-        else:
-            p_name = rf"\textbf{{{p_name}}}"
-
-        lines = [
-            p_name,
-            r"\begin{itemize}",
-        ]
-
         desc = project.get("description", [])
-        if isinstance(desc, list):
-            for item in desc:
-                lines.append(rf"    \item {escape_latex(item)}")
-
-        lines.append(r"\end{itemize}")
-
         tech = project.get("tech_stack", [])
-        if tech and isinstance(tech, list):
-            lines.append(rf"\textit{{Tech Stack: {', '.join(escape_latex(t) for t in tech)}}}")
 
-        blocks.append("\n".join(lines))
+        desc_items = [escape_latex(item).strip() for item in desc if str(item).strip()] if isinstance(desc, list) else []
+        tech_items = [escape_latex(t).strip() for t in tech if str(t).strip()] if isinstance(tech, list) else []
+
+        if not p_name and not desc_items and not tech_items:
+            continue
+
+        lines = []
+        if p_url and p_name:
+            lines.append(rf"\textbf{{{p_name}}} ({format_url(p_url)})")
+        elif p_name:
+            lines.append(rf"\textbf{{{p_name}}}")
+
+        if desc_items:
+            lines.append(r"\begin{itemize}")
+            for item in desc_items:
+                lines.append(rf"    \item {item}")
+            lines.append(r"\end{itemize}")
+
+        if tech_items:
+            lines.append(rf"\textit{{Tech Stack: {', '.join(tech_items)}}}")
+
+        if lines:
+            blocks.append("\n".join(lines))
 
     return "\n\n\\vspace{5pt}\n\n".join(blocks)
+
+
+def build_projects_section(projects: Any) -> str:
+    proj_text = build_projects(projects).strip()
+    if not proj_text:
+        return ""
+    return f"% ---------- Projects ----------\n\\section{{PROJECTS}}\n\n{proj_text}"
 
 
 def build_education(education: Union[Dict[str, Any], List[Dict[str, Any]]]) -> str:
@@ -429,24 +463,80 @@ def build_education(education: Union[Dict[str, Any], List[Dict[str, Any]]]) -> s
     if isinstance(education, list):
         if not education:
             return ""
-        education = education[0]
+        valid_edus = [
+            e for e in education
+            if isinstance(e, dict) and any(str(e.get(k, "")).strip() for k in ("degree", "institution", "location", "year"))
+        ]
+        if not valid_edus:
+            return ""
+        edu_entries = []
+        for edu in valid_edus:
+            deg = escape_latex(edu.get("degree", "")).strip()
+            inst = escape_latex(edu.get("institution", "")).strip()
+            loc = escape_latex(edu.get("location", "")).strip()
+            yr = escape_latex(edu.get("year", "")).strip()
+
+            lines = []
+            if deg and yr:
+                lines.append(rf"\textbf{{{deg}}} \hfill {yr}\\")
+            elif deg:
+                lines.append(rf"\textbf{{{deg}}}\\")
+            elif yr:
+                lines.append(rf"\hfill {yr}\\")
+
+            second_line = []
+            if inst:
+                second_line.append(inst)
+            if loc:
+                second_line.append(loc)
+            if second_line:
+                lines.append(", ".join(second_line))
+
+            if lines:
+                edu_entries.append("\n".join(lines))
+        return "\n\n\\vspace{3pt}\n\n".join(edu_entries)
+
     if not isinstance(education, dict):
         return ""
 
-    degree = escape_latex(education.get("degree", ""))
-    institution = escape_latex(education.get("institution", ""))
-    location = escape_latex(education.get("location", ""))
-    year = escape_latex(education.get("year", ""))
+    degree = escape_latex(education.get("degree", "")).strip()
+    institution = escape_latex(education.get("institution", "")).strip()
+    location = escape_latex(education.get("location", "")).strip()
+    year = escape_latex(education.get("year", "")).strip()
 
-    return rf"""
-\textbf{{{degree}}} \hfill {year}\\
-{institution}, {location}
-""".strip()
+    if not degree and not institution and not location and not year:
+        return ""
+
+    lines = []
+    if degree and year:
+        lines.append(rf"\textbf{{{degree}}} \hfill {year}\\")
+    elif degree:
+        lines.append(rf"\textbf{{{degree}}}\\")
+    elif year:
+        lines.append(rf"\hfill {year}\\")
+
+    second_line = []
+    if institution:
+        second_line.append(institution)
+    if location:
+        second_line.append(location)
+    if second_line:
+        lines.append(", ".join(second_line))
+
+    return "\n".join(lines).strip()
+
+
+def build_education_section(education: Any) -> str:
+    edu_text = build_education(education).strip()
+    if not edu_text:
+        return ""
+    return f"% ---------- Education ----------\n\\section{{EDUCATION}}\n\n{edu_text}"
 
 
 def generate_latex(data: Dict[str, Any]) -> str:
     """
     Takes candidate resume data dict and generates ATS 92+ formatted LaTeX (.tex) string.
+    Only sections with non-empty content are rendered.
     """
     if not data or not isinstance(data, dict):
         data = {}
@@ -455,28 +545,21 @@ def generate_latex(data: Dict[str, Any]) -> str:
     if not isinstance(personal, dict):
         personal = {}
 
-    name = escape_latex(personal.get("name", "") or data.get("name", ""))
-    title = format_title(personal.get("title", "") or data.get("title", ""))
-    contacts = build_contacts(personal)
-    summary = escape_latex(data.get("summary", ""))
-    skills = build_skills(data.get("skills", {}))
-    experience = build_experience(data.get("experience", []))
-    projects = build_projects(data.get("projects", []))
-    education = build_education(data.get("education", {}))
+    header = build_header(personal, data)
 
-    replacements = {
-        "__NAME__": name,
-        "__TITLE__": title,
-        "__CONTACTS__": contacts,
-        "__SUMMARY__": summary,
-        "__SKILLS__": skills,
-        "__EXPERIENCE__": experience,
-        "__PROJECTS__": projects,
-        "__EDUCATION__": education,
-    }
+    body_sections = [
+        build_summary_section(data.get("summary", "") or personal.get("summary", "")),
+        build_skills_section(data.get("skills", {})),
+        build_experience_section(data.get("experience", [])),
+        build_projects_section(data.get("projects", [])),
+        build_education_section(data.get("education", {})),
+    ]
+
+    body = "\n\n".join([sec for sec in body_sections if sec])
 
     latex = LATEX_TEMPLATE
-    for placeholder, value in replacements.items():
-        latex = latex.replace(placeholder, value)
+    latex = latex.replace("__HEADER__", header)
+    latex = latex.replace("__BODY__", body)
 
     return latex.strip() + "\n"
+

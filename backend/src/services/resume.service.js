@@ -85,6 +85,7 @@ export async function tailorResume(jobDescription, applicationId = null) {
     return {
       urls,
       primaryUrl,
+      filename: data?.filename || null,
     };
   } catch (error) {
     const errorMsg =

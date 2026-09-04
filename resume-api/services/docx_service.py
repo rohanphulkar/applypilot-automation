@@ -220,14 +220,14 @@ def generate_docx(data: Dict[str, Any], output_file_path: Union[str, Path]) -> P
             _add_docx_hyperlink(p_contacts, href, display_txt, color=COLOR_DOCX_LINK, underline=False)
 
     # Summary
-    if summary:
+    if summary and str(summary).strip():
         _add_docx_section_heading(doc, "SUMMARY")
         p_sum = doc.add_paragraph()
         p_sum.paragraph_format.space_before = Pt(2)
         p_sum.paragraph_format.space_after = Pt(4)
         p_sum.paragraph_format.line_spacing = 1.08
 
-        r_sum = p_sum.add_run(summary)
+        r_sum = p_sum.add_run(str(summary).strip())
         r_sum.font.name = "Calibri"
         r_sum.font.size = Pt(9.5)
         r_sum.font.color.rgb = COLOR_DOCX_TEXT
@@ -257,13 +257,23 @@ def generate_docx(data: Dict[str, Any], output_file_path: Union[str, Path]) -> P
 
     # Experience
     experience = data.get("experience", [])
-    if experience and isinstance(experience, list):
-        _add_docx_section_heading(doc, "EXPERIENCE")
-
+    valid_experience = []
+    if isinstance(experience, list):
         for job in experience:
             if not isinstance(job, dict):
                 continue
+            company = str(job.get("company", "")).strip()
+            role = str(job.get("role", "")).strip()
+            dates = str(job.get("dates", "")).strip()
+            bullets = [str(b).strip() for b in job.get("bullets", []) if str(b).strip()] if isinstance(job.get("bullets"), list) else []
+            tech_stack = [str(t).strip() for t in job.get("tech_stack", []) if str(t).strip()] if isinstance(job.get("tech_stack"), list) else []
+            if company or role or dates or bullets or tech_stack:
+                valid_experience.append(job)
 
+    if valid_experience:
+        _add_docx_section_heading(doc, "EXPERIENCE")
+
+        for job in valid_experience:
             company = str(job.get("company", "")).strip()
             role = str(job.get("role", "")).strip()
             dates = str(job.get("dates", "")).strip()
@@ -345,13 +355,21 @@ def generate_docx(data: Dict[str, Any], output_file_path: Union[str, Path]) -> P
 
     # Projects
     projects = data.get("projects", [])
-    if projects and isinstance(projects, list):
-        _add_docx_section_heading(doc, "PROJECTS")
-
+    valid_projects = []
+    if isinstance(projects, list):
         for proj in projects:
             if not isinstance(proj, dict):
                 continue
+            p_name_val = str(proj.get("name", "")).strip()
+            p_desc = [str(d).strip() for d in proj.get("description", []) if str(d).strip()] if isinstance(proj.get("description"), list) else []
+            p_techs = [str(t).strip() for t in proj.get("tech_stack", []) if str(t).strip()] if isinstance(proj.get("tech_stack"), list) else []
+            if p_name_val or p_desc or p_techs:
+                valid_projects.append(proj)
 
+    if valid_projects:
+        _add_docx_section_heading(doc, "PROJECTS")
+
+        for proj in valid_projects:
             p_name_val = str(proj.get("name", "")).strip()
             p_url_val = proj.get("url", "")
             p_desc = proj.get("description", [])
@@ -418,10 +436,13 @@ def generate_docx(data: Dict[str, Any], output_file_path: Union[str, Path]) -> P
     # Education
     education = data.get("education")
     edu_list = []
-    if isinstance(education, dict) and (education.get("degree") or education.get("institution")):
+    if isinstance(education, dict) and any(str(education.get(k, "")).strip() for k in ("degree", "institution", "location", "year")):
         edu_list = [education]
     elif isinstance(education, list):
-        edu_list = [e for e in education if isinstance(e, dict) and (e.get("degree") or e.get("institution"))]
+        edu_list = [
+            e for e in education
+            if isinstance(e, dict) and any(str(e.get(k, "")).strip() for k in ("degree", "institution", "location", "year"))
+        ]
 
     if edu_list:
         _add_docx_section_heading(doc, "EDUCATION")

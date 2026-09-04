@@ -85,7 +85,7 @@ def load_master_resume() -> Dict[str, Any]:
 
     # Fallback to minimal default
     return {
-        "resume_name": "Rohan Phulkar - Backend Engineer",
+        "resume_name": "Rohan Phulkar",
         "personal": {
             "name": "Rohan Phulkar",
             "title": "Backend Engineer",

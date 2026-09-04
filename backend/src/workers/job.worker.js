@@ -155,6 +155,9 @@ export async function processApplicationJob(bullmqJob) {
       );
 
       job.resume.urls = resumeResult.urls;
+      if (resumeResult.filename) {
+        job.resume.filename = resumeResult.filename;
+      }
       job.resume.requestStatus = "COMPLETED";
       job.timeline.push({
         stage: "TAILORING_RESUME",
@@ -215,7 +218,11 @@ export async function processApplicationJob(bullmqJob) {
     // Download primary resume PDF for email attachment if available
     const primaryResumeUrl = job.resume.urls?.[0];
     if (primaryResumeUrl) {
-      resumeFilePath = await downloadResumeFile(primaryResumeUrl, applicationId);
+      resumeFilePath = await downloadResumeFile(
+        primaryResumeUrl,
+        applicationId,
+        job.resume.filename ? `${job.resume.filename}.pdf` : null
+      );
     }
 
     // Convert plain text cover letter into clean HTML email body

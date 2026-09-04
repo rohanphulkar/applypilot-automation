@@ -14,13 +14,40 @@ import { PipelineError } from "../utils/errors.js";
  *
  * @param {string} resumeUrl - S3 or Presigned URL of the resume
  * @param {string} applicationId - Job/Application ID
+ * @param {string} [customFilename] - Optional custom filename for attachment
  * @returns {Promise<string>} Local file path to the downloaded PDF
  */
-export async function downloadResumeFile(resumeUrl, applicationId) {
+export async function downloadResumeFile(resumeUrl, applicationId, customFilename = null) {
   const tempDir = path.join(os.tmpdir(), "applypilot", applicationId);
   await fs.promises.mkdir(tempDir, { recursive: true });
 
-  const filePath = path.join(tempDir, "Resume.pdf");
+  // Resolve target filename from customFilename, URL query string (filename=...), or URL pathname
+  let resolvedFilename = customFilename;
+  if (!resolvedFilename && typeof resumeUrl === "string") {
+    try {
+      const parsedUrl = new URL(resumeUrl.startsWith("http") ? resumeUrl : `http://localhost/${resumeUrl}`);
+      const queryMatch = parsedUrl.search.match(/filename(?:%3D|=)(?:%22|")?([^&"%]+)/i);
+      if (queryMatch && queryMatch[1]) {
+        resolvedFilename = decodeURIComponent(queryMatch[1]);
+      } else {
+        const base = path.basename(parsedUrl.pathname);
+        if (base && base.toLowerCase().endsWith(".pdf")) {
+          resolvedFilename = base;
+        }
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  if (!resolvedFilename) {
+    resolvedFilename = "Rohan_Phulkar_Resume.pdf";
+  }
+  if (!resolvedFilename.toLowerCase().endsWith(".pdf")) {
+    resolvedFilename += ".pdf";
+  }
+
+  const filePath = path.join(tempDir, resolvedFilename);
 
   // 1. Direct local file check
   if (typeof resumeUrl === "string" && fs.existsSync(resumeUrl) && fs.statSync(resumeUrl).isFile()) {
@@ -165,8 +192,9 @@ export async function buildRawMimeMessage({
   };
 
   if (resumeFilePath && fs.existsSync(resumeFilePath)) {
+    const finalFilename = path.basename(resumeFilePath) || "Rohan_Phulkar_Resume.pdf";
     mailOptions.attachments.push({
-      filename: "Resume.pdf",
+      filename: finalFilename,
       path: resumeFilePath,
       contentType: "application/pdf",
     });
