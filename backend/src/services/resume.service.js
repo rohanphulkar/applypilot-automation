@@ -40,27 +40,33 @@ export async function tailorResume(jobDescription, applicationId = null) {
       }
     );
 
-    const data = response.data;
-    const urls = [];
+    const rawUrls = [];
 
     // Extract PDF and other artifact URLs from response
     if (data.files) {
-      if (data.files.pdf?.presigned_url) urls.push(data.files.pdf.presigned_url);
-      else if (data.files.pdf?.s3_url) urls.push(data.files.pdf.s3_url);
+      if (data.files.pdf?.presigned_url) rawUrls.push(data.files.pdf.presigned_url);
+      else if (data.files.pdf?.s3_url) rawUrls.push(data.files.pdf.s3_url);
 
-      if (data.files.docx?.presigned_url) urls.push(data.files.docx.presigned_url);
-      else if (data.files.docx?.s3_url) urls.push(data.files.docx.s3_url);
+      if (data.files.docx?.presigned_url) rawUrls.push(data.files.docx.presigned_url);
+      else if (data.files.docx?.s3_url) rawUrls.push(data.files.docx.s3_url);
     } else if (Array.isArray(data.urls)) {
-      urls.push(...data.urls);
+      rawUrls.push(...data.urls);
     } else if (data.url) {
-      urls.push(data.url);
+      rawUrls.push(data.url);
     } else if (data.pdf_url) {
-      urls.push(data.pdf_url);
+      rawUrls.push(data.pdf_url);
     }
 
-    if (urls.length === 0) {
+    if (rawUrls.length === 0) {
       throw new Error("Resume API did not return any valid resume URLs.");
     }
+
+    const baseUrl = config.resumeApi.baseUrl.replace(/\/$/, "");
+    const urls = rawUrls.map((u) => {
+      if (!u) return null;
+      if (u.startsWith("http://") || u.startsWith("https://")) return u;
+      return `${baseUrl}/${u.replace(/^\//, "")}`;
+    }).filter(Boolean);
 
     const primaryUrl = urls[0];
 

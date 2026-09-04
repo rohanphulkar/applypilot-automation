@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 
 from config import settings
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
+from fastapi.responses import FileResponse
 from schemas import (
     CandidateResume,
     CompileLatexRequest,
@@ -105,8 +106,9 @@ async def execute_tailoring_pipeline(
         extracted_job = tailored_data.get("job")
         candidate_json = tailored_data.get("candidate", master_resume)
 
-        # Prepare local working directory (mirrors S3 folder structure)
-        work_dir = settings.MEDIA_DIR / folder_name
+        # Prepare local working directory (matches local media key structure)
+        target_pdf_path = settings.MEDIA_DIR / keys["pdf"].lstrip("/")
+        work_dir = target_pdf_path.parent
         work_dir.mkdir(parents=True, exist_ok=True)
 
         tex_path = work_dir / f"{base_filename}.tex"
@@ -123,7 +125,7 @@ async def execute_tailoring_pipeline(
         # Step 4: Generate .docx file
         generate_docx(candidate_json, docx_path)
 
-        # Step 5: Upload all files to AWS S3 in dedicated job folder
+        # Step 5: Save files to local media (and S3 if enabled)
         upload_file_to_s3(tex_path, keys["tex"])
         upload_file_to_s3(pdf_path, keys["pdf"])
         upload_file_to_s3(docx_path, keys["docx"])
@@ -190,11 +192,12 @@ async def execute_direct_generation_pipeline(
     keys: Dict[str, str],
 ):
     """
-    Generates .tex, .pdf, .docx from pre-structured candidate data and uploads to S3.
+    Generates .tex, .pdf, .docx from pre-structured candidate data and uploads to S3/local media.
     """
     logger.info("Starting direct resume generation for job %s...", job_id)
     try:
-        work_dir = settings.MEDIA_DIR
+        target_pdf_path = settings.MEDIA_DIR / keys["pdf"].lstrip("/")
+        work_dir = target_pdf_path.parent
         work_dir.mkdir(parents=True, exist_ok=True)
 
         tex_path = work_dir / f"{timestamped_name}.tex"
@@ -211,7 +214,7 @@ async def execute_direct_generation_pipeline(
         # 3. DOCX
         generate_docx(candidate_data, docx_path)
 
-        # 4. S3 Uploads
+        # 4. Save to local media (and S3 if enabled)
         upload_file_to_s3(tex_path, keys["tex"])
         upload_file_to_s3(pdf_path, keys["pdf"])
         upload_file_to_s3(docx_path, keys["docx"])
@@ -598,3 +601,62 @@ async def compile_latex_endpoint(request: CompileLatexRequest):
             "presigned_url": tex_presigned,
         },
     }
+
+
+@router.get(
+    "/download/{job_id}/{file_format}",
+    summary="Download Resume File by Job ID and Format",
+)
+@router.get(
+    "/jobs/{job_id}/download/{file_format}",
+    summary="Download Resume File by Job ID and Format",
+)
+async def download_resume_file_endpoint(job_id: str, file_format: str):
+    """
+    Directly streams the requested resume file (.pdf, .docx, or .tex) from local disk.
+    """
+    fmt = file_format.lower().lstrip(".")
+    if fmt not in ("pdf", "docx", "tex"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Supported formats: pdf, docx, tex",
+        )
+
+    doc = await db_get_job(job_id)
+    local_path = None
+
+    if doc:
+        files = doc.get("files", {})
+        file_info = files.get(fmt, {})
+        key = file_info.get("key")
+        if key:
+            candidate_path = (settings.MEDIA_DIR / key.lstrip("/")).resolve()
+            if candidate_path.exists():
+                local_path = candidate_path
+
+    if not local_path or not local_path.exists():
+        # Fallback: search MEDIA_DIR for any matching file for this job_id or filename
+        search_term = doc.get("filename", job_id) if doc else job_id
+        for found in settings.MEDIA_DIR.rglob(f"*{search_term}*.{fmt}"):
+            if found.is_file():
+                local_path = found
+                break
+
+    if not local_path or not local_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"File for format '{fmt}' not found on server.",
+        )
+
+    media_types = {
+        "pdf": "application/pdf",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "tex": "text/x-tex; charset=utf-8",
+    }
+
+    return FileResponse(
+        path=local_path,
+        media_type=media_types.get(fmt, "application/octet-stream"),
+        filename=local_path.name,
+    )
+

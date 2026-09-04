@@ -67,10 +67,12 @@ async def lifespan(app: FastAPI):
     await close_mongo_connection()
 
 
+from fastapi.staticfiles import StaticFiles
+
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="ATS 92+ Resume Optimization, LaTeX/PDF/DOCX Generation, MongoDB Persistence, and AWS S3 Presigned URLs",
+    description="ATS 92+ Resume Optimization, LaTeX/PDF/DOCX Generation, MongoDB Persistence, and Local Static Media Serving",
     lifespan=lifespan,
 )
 
@@ -82,6 +84,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount local media directory for direct HTTP downloads
+settings.MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/media", StaticFiles(directory=str(settings.MEDIA_DIR)), name="media")
 
 # Include Routers
 app.include_router(resume_router)
@@ -112,9 +118,17 @@ async def health_check():
 
     pdflatex_found = shutil.which("pdflatex") is not None
     openai_configured = bool(settings.OPENAI_API_KEY)
-    s3_configured = bool(settings.AWS_S3_BUCKET and settings.AWS_ACCESS_KEY_ID)
+    storage_healthy = True
+    storage_status = "local_filesystem"
 
-    all_healthy = mongo_connected and pdflatex_found and openai_configured and s3_configured
+    if settings.USE_S3:
+        if settings.AWS_S3_BUCKET and settings.AWS_ACCESS_KEY_ID:
+            storage_status = "aws_s3"
+        else:
+            storage_healthy = False
+            storage_status = "s3_missing_credentials"
+
+    all_healthy = mongo_connected and pdflatex_found and openai_configured and storage_healthy
 
     return {
         "status": "healthy" if all_healthy else "degraded",
@@ -124,11 +138,11 @@ async def health_check():
             "mongodb": "connected" if mongo_connected else "disconnected",
             "pdflatex": "available" if pdflatex_found else "missing",
             "openai_api": "configured" if openai_configured else "missing_key",
-            "aws_s3": "configured" if s3_configured else "missing_credentials",
+            "storage": storage_status,
         },
         "database": settings.MONGODB_DB_NAME,
-        "bucket": settings.AWS_S3_BUCKET,
-        "region": settings.AWS_REGION,
+        "media_dir": str(settings.MEDIA_DIR),
+        "public_base_url": settings.PUBLIC_BASE_URL,
         "openai_model": settings.OPENAI_MODEL,
     }
 

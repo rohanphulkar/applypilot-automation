@@ -157,8 +157,27 @@ export async function retryJob(req, res, next) {
       $or: [{ jobId: id }, ...(id.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: id }] : [])],
     });
 
-    if (!job) {
-      throw new NotFoundError(`Job application with ID '${id}' not found.`);
+    const failedStage = job.error?.stage || job.processing?.currentStage;
+
+    // Reset failed stage flags to allow re-execution
+    if (failedStage === "TAILORING_RESUME" || failedStage === "COMPOSING_EMAIL") {
+      job.resume.requestStatus = "PENDING";
+      job.resume.urls = [];
+    }
+    if (failedStage === "GENERATING_COVER_LETTER") {
+      job.coverLetter.status = "PENDING";
+    }
+    if (failedStage === "PARSING_JOB") {
+      job.parsedJob = {
+        title: null,
+        company: null,
+        location: null,
+        skills: null,
+        applicationEmail: null,
+        salary: null,
+        experienceLevel: null,
+        summary: null,
+      };
     }
 
     // Reset status to QUEUED
@@ -167,7 +186,7 @@ export async function retryJob(req, res, next) {
     job.timeline.push({
       stage: "QUEUED",
       status: "RETRY_TRIGGERED",
-      message: "Application retry triggered by user",
+      message: `Application retry triggered for failed stage [${failedStage || "UNKNOWN"}]`,
       createdAt: new Date(),
     });
     await job.save();
@@ -175,7 +194,10 @@ export async function retryJob(req, res, next) {
     // Re-enqueue in BullMQ
     await addJobToQueue(job.jobId);
 
-    logger.info("Application retry initiated", { applicationId: job.jobId });
+    logger.info("Application retry initiated", {
+      applicationId: job.jobId,
+      retryingFromStage: failedStage,
+    });
 
     return res.status(200).json({
       success: true,

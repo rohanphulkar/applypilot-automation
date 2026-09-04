@@ -1,12 +1,14 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { RotateCw, PlusCircle, Flame, Gem, Heart } from "lucide-react";
+import { RotateCw, PlusCircle, Flame, Gem, Heart, Menu } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDashboardStats } from "../services/dashboard.service.js";
+import { useUIStore } from "../store/uiStore.js";
 
 export function TopNavbar() {
   const queryClient = useQueryClient();
   const location = useLocation();
+  const { toggleMobileMenu } = useUIStore();
 
   const { data: statsData } = useQuery({
     queryKey: ["dashboardStats"],
@@ -36,41 +38,50 @@ export function TopNavbar() {
   };
 
   return (
-    <header className="h-20 px-6 border-b-2 border-[#2e414c] bg-[#1b2b32]/95 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between select-none">
-      {/* Title & Page Header */}
-      <div className="flex items-center gap-3">
-        <h1 className="text-base font-black text-white tracking-wider uppercase">
+    <header className="h-16 md:h-20 px-3 sm:px-6 border-b-2 border-[#2e414c] bg-[#1b2b32]/95 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between select-none">
+      {/* Title & Mobile Hamburger */}
+      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <button
+          type="button"
+          onClick={toggleMobileMenu}
+          className="md:hidden p-2 rounded-xl text-[#a5b6be] hover:text-white hover:bg-[#233a44] transition-colors cursor-pointer"
+          title="Open Navigation Menu"
+        >
+          <Menu size={20} className="stroke-[2.5]" />
+        </button>
+
+        <h1 className="text-xs sm:text-base font-black text-white tracking-wider uppercase truncate">
           {getPageTitle()}
         </h1>
       </div>
 
       {/* Center / Right Duolingo Gamified Metric Counters */}
-      <div className="flex items-center gap-3 md:gap-5">
+      <div className="flex items-center gap-1.5 sm:gap-3 md:gap-5 shrink-0">
         {/* Streak Flame */}
         <div
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#382512] border-2 border-[#ff9600] text-[#ffaa33] font-black text-xs cursor-default"
+          className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl bg-[#382512] border-2 border-[#ff9600] text-[#ffaa33] font-black text-[11px] sm:text-xs cursor-default"
           title="Active & Queued Applications"
         >
-          <Flame size={16} className="text-[#ff9600] fill-[#ff9600]" />
-          <span>{activeCount} ACTIVE</span>
+          <Flame size={14} className="text-[#ff9600] fill-[#ff9600] shrink-0" />
+          <span>{activeCount}<span className="hidden sm:inline"> ACTIVE</span></span>
         </div>
 
         {/* Gems / Completed */}
         <div
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#162a35] border-2 border-[#1cb0f6] text-[#1cb0f6] font-black text-xs cursor-default"
+          className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl bg-[#162a35] border-2 border-[#1cb0f6] text-[#1cb0f6] font-black text-[11px] sm:text-xs cursor-default"
           title="Completed Applications"
         >
-          <Gem size={16} className="text-[#1cb0f6] fill-[#1cb0f6]" />
-          <span>{completedCount} DONE</span>
+          <Gem size={14} className="text-[#1cb0f6] fill-[#1cb0f6] shrink-0" />
+          <span>{completedCount}<span className="hidden sm:inline"> DONE</span></span>
         </div>
 
         {/* Hearts / Emails Sent */}
         <div
-          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#38181a] border-2 border-[#ff4b4b] text-[#ff7a7a] font-black text-xs cursor-default"
+          className="hidden xs:flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl bg-[#38181a] border-2 border-[#ff4b4b] text-[#ff7a7a] font-black text-[11px] sm:text-xs cursor-default"
           title="Emails Delivered via SMTP & IMAP"
         >
-          <Heart size={16} className="text-[#ff4b4b] fill-[#ff4b4b]" />
-          <span>{emailsSent} SENT</span>
+          <Heart size={14} className="text-[#ff4b4b] fill-[#ff4b4b] shrink-0" />
+          <span>{emailsSent}<span className="hidden sm:inline"> SENT</span></span>
         </div>
 
         {/* Refresh Button - 3D Tactile */}
@@ -78,19 +89,19 @@ export function TopNavbar() {
           type="button"
           onClick={handleRefresh}
           title="Refresh Data"
-          className="p-2.5 rounded-2xl border-2 border-[#2e414c] border-b-4 border-b-[#202f37] bg-[#1b2b32] text-[#a5b6be] hover:bg-[#233a44] hover:text-white active:border-b-2 active:translate-y-0.5 transition-all cursor-pointer"
+          className="p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl border-2 border-[#2e414c] border-b-4 border-b-[#202f37] bg-[#1b2b32] text-[#a5b6be] hover:bg-[#233a44] hover:text-white active:border-b-2 active:translate-y-0.5 transition-all cursor-pointer"
         >
-          <RotateCw size={16} className="stroke-[2.5]" />
+          <RotateCw size={14} className="stroke-[2.5]" />
         </button>
 
-        {/* Quick CTA Button */}
+        {/* Quick CTA Button (Desktop) */}
         {location.pathname !== "/applications/new" && (
           <Link
             to="/applications/new"
-            className="duo-btn-primary px-4 py-2 text-xs font-black tracking-wider flex items-center gap-1.5 ml-1"
+            className="hidden md:flex duo-btn-primary px-3 sm:px-4 py-2 text-xs font-black tracking-wider items-center gap-1.5 ml-1"
           >
             <PlusCircle size={15} className="stroke-[2.5]" />
-            <span className="hidden md:inline">APPLY NOW</span>
+            <span>APPLY NOW</span>
           </Link>
         )}
       </div>

@@ -69,6 +69,7 @@ export function ApplicationDetailsPage() {
       queryClient.invalidateQueries({ queryKey: ["application", id] });
       queryClient.invalidateQueries({ queryKey: ["applications"] });
       queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
+      queryClient.invalidateQueries({ queryKey: ["taskQueue"] });
     },
   });
 
@@ -77,25 +78,27 @@ export function ApplicationDetailsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["applications"] });
       queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
+      queryClient.invalidateQueries({ queryKey: ["taskQueue"] });
       navigate("/applications");
     },
   });
 
   if (isLoading && !data) {
     return (
-      <div className="space-y-6">
-        <div className="h-8 bg-[#e5e5e5] dark:bg-[#202f37] rounded-2xl w-48 animate-pulse" />
-        <LoadingSkeleton count={1} type="stepper" />
-        <LoadingSkeleton count={3} type="card" />
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
+        <RotateCw size={32} className="animate-spin text-[#58cc02]" />
+        <span className="text-xs font-black uppercase tracking-wider text-[#777777] dark:text-[#a5b6be]">
+          Loading application data...
+        </span>
       </div>
     );
   }
 
   if (error || !data?.data) {
     return (
-      <div className="text-center py-16 space-y-4 select-none">
-        <div className="w-16 h-16 rounded-2xl bg-[#ffe5e5] dark:bg-[#38181a] border-2 border-[#ff4b4b] text-[#ff4b4b] flex items-center justify-center mx-auto">
-          <AlertCircle size={32} className="stroke-[2.5]" />
+      <div className="duo-card p-8 text-center space-y-4 max-w-md mx-auto my-12">
+        <div className="w-16 h-16 rounded-full bg-[#ffe5e5] dark:bg-[#38181a] border-2 border-[#ff4b4b] text-[#ff4b4b] flex items-center justify-center mx-auto">
+          <AlertCircle size={32} />
         </div>
         <h3 className="text-lg font-black text-[#3c3c3c] dark:text-white uppercase">
           Application Not Found
@@ -133,16 +136,16 @@ export function ApplicationDetailsPage() {
           <ArrowLeft size={14} className="stroke-[3]" /> Back to Applications
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {isFailed && (
             <button
               type="button"
               onClick={() => retryMutation.mutate()}
               disabled={retryMutation.isPending}
-              className="duo-btn-danger px-4 py-2 text-xs font-black flex items-center gap-1.5"
+              className="duo-btn-danger px-4 py-2 text-xs font-black flex items-center gap-1.5 cursor-pointer"
             >
               <RotateCw size={14} className={retryMutation.isPending ? "animate-spin" : "stroke-[2.5]"} />
-              <span>RETRY PIPELINE</span>
+              <span>{retryMutation.isPending ? "RETRYING..." : "RETRY PIPELINE"}</span>
             </button>
           )}
 
@@ -158,7 +161,7 @@ export function ApplicationDetailsPage() {
       </div>
 
       {/* Hero Card with Stepper */}
-      <div className="duo-card p-6 md:p-8 space-y-6">
+      <div className="duo-card p-4 sm:p-6 md:p-8 space-y-6">
         {/* Title & Key Badges */}
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
@@ -171,11 +174,11 @@ export function ApplicationDetailsPage() {
               )}
             </div>
 
-            <h2 className="text-2xl md:text-3xl font-black text-[#3c3c3c] dark:text-white tracking-tight">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-[#3c3c3c] dark:text-white tracking-tight wrap-break-word">
               {parsed.title || "Job Application"}
             </h2>
 
-            <div className="flex items-center gap-4 text-xs font-black text-[#777777] dark:text-[#a5b6be] mt-2 flex-wrap uppercase">
+            <div className="flex items-center gap-3 sm:gap-4 text-xs font-black text-[#777777] dark:text-[#a5b6be] mt-2 flex-wrap uppercase">
               {parsed.company && (
                 <span className="flex items-center gap-1.5 text-[#1cb0f6]">
                   <Building size={15} className="stroke-[2.5]" /> {parsed.company}
@@ -199,18 +202,30 @@ export function ApplicationDetailsPage() {
           </div>
         </div>
 
-        {/* Error Alert (If Failed) */}
+        {/* Error Alert (If Failed) with Actionable Retry Button */}
         {isFailed && (
-          <div className="p-4 rounded-2xl bg-[#ffe5e5] dark:bg-[#38181a] border-2 border-[#ff4b4b] text-[#ea2b2b] dark:text-[#ff7a7a] text-xs flex items-start gap-3">
-            <AlertCircle size={20} className="shrink-0 mt-0.5 stroke-[3]" />
-            <div>
-              <span className="font-black block uppercase tracking-wider">
-                Pipeline Failed at Stage [{app.error?.stage || "WORKER"}]
-              </span>
-              <p className="mt-0.5 leading-relaxed font-bold">
-                {app.error?.message || "An unexpected error occurred during processing."}
-              </p>
+          <div className="p-4 rounded-2xl bg-[#ffe5e5] dark:bg-[#38181a] border-2 border-[#ff4b4b] text-[#ea2b2b] dark:text-[#ff7a7a] text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <AlertCircle size={20} className="shrink-0 mt-0.5 stroke-[3]" />
+              <div>
+                <span className="font-black block uppercase tracking-wider">
+                  Pipeline Failed at Stage [{app.error?.stage || "WORKER"}]
+                </span>
+                <p className="mt-0.5 leading-relaxed font-bold wrap-break-word">
+                  {app.error?.message || "An unexpected error occurred during processing."}
+                </p>
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => retryMutation.mutate()}
+              disabled={retryMutation.isPending}
+              className="duo-btn-danger px-4 py-2 text-xs font-black flex items-center justify-center gap-2 shrink-0 cursor-pointer self-start sm:self-auto"
+            >
+              <RotateCw size={14} className={retryMutation.isPending ? "animate-spin" : "stroke-[2.5]"} />
+              <span>{retryMutation.isPending ? "RETRYING..." : "RETRY NOW"}</span>
+            </button>
           </div>
         )}
 

@@ -19,7 +19,8 @@ def get_s3_client():
     global _s3_client
     if _s3_client is None:
         if (
-            settings.AWS_ACCESS_KEY_ID
+            settings.USE_S3
+            and settings.AWS_ACCESS_KEY_ID
             and settings.AWS_SECRET_ACCESS_KEY
             and settings.AWS_S3_BUCKET
         ):
@@ -30,7 +31,6 @@ def get_s3_client():
                 region_name=settings.AWS_REGION,
             )
         else:
-            logger.warning("AWS credentials not configured. Local media fallback will be used.")
             _s3_client = None
     return _s3_client
 
@@ -41,7 +41,7 @@ def compute_job_folder_and_keys(
     timestamp: Optional[str] = None,
 ) -> Tuple[str, str, Dict[str, str]]:
     """
-    Computes a dedicated S3 folder and keys for each tailored job.
+    Computes a dedicated folder and keys for each tailored job.
 
     Folder format:
       resumes/{role_slug}-{YYYY-MM-DD_HH-MM-SS}/
@@ -88,7 +88,7 @@ def compute_file_keys(
 
 def compute_file_keys_from_name(timestamped_name: str) -> Dict[str, str]:
     """
-    Computes S3 keys for tex, pdf, and docx from an exact filename.
+    Computes keys for tex, pdf, and docx from an exact filename.
     """
     prefix = settings.S3_KEY_PREFIX.strip("/")
     return {
@@ -100,11 +100,14 @@ def compute_file_keys_from_name(timestamped_name: str) -> Dict[str, str]:
 
 def get_s3_public_url(key: str) -> str:
     """
-    Returns the standard public / CDN S3 URL.
+    Returns the media URL (AWS S3 public URL or local FastAPI /media URL).
     """
-    if settings.AWS_S3_BUCKET:
-        return f"https://{settings.AWS_S3_BUCKET}.s3.{settings.AWS_REGION}.amazonaws.com/{key}"
-    return f"/media/{key}"
+    clean_key = key.lstrip("/")
+    if settings.USE_S3 and settings.AWS_S3_BUCKET:
+        return f"https://{settings.AWS_S3_BUCKET}.s3.{settings.AWS_REGION}.amazonaws.com/{clean_key}"
+
+    base_url = settings.PUBLIC_BASE_URL.rstrip("/")
+    return f"{base_url}/media/{clean_key}"
 
 
 def generate_presigned_download_url(
@@ -113,34 +116,35 @@ def generate_presigned_download_url(
     filename: Optional[str] = None,
 ) -> str:
     """
-    Generates a presigned S3 GET URL for instant downloading.
-    Falls back to direct S3 URL or local media URL if AWS credentials are not configured.
+    Generates a download URL.
+    Uses AWS S3 Presigned URL when USE_S3=true and configured;
+    otherwise returns direct local FastAPI /media URL.
     """
-    client = get_s3_client()
-    if not client or not settings.AWS_S3_BUCKET:
-        return get_s3_public_url(key)
+    clean_key = key.lstrip("/")
+    if settings.USE_S3 and settings.AWS_S3_BUCKET:
+        client = get_s3_client()
+        if client:
+            if expiration is None:
+                expiration = settings.PRESIGNED_URL_EXPIRATION
 
-    if expiration is None:
-        expiration = settings.PRESIGNED_URL_EXPIRATION
+            params = {
+                "Bucket": settings.AWS_S3_BUCKET,
+                "Key": clean_key,
+            }
+            if filename:
+                params["ResponseContentDisposition"] = f'attachment; filename="{filename}"'
 
-    params = {
-        "Bucket": settings.AWS_S3_BUCKET,
-        "Key": key,
-    }
+            try:
+                presigned_url = client.generate_presigned_url(
+                    "get_object",
+                    Params=params,
+                    ExpiresIn=expiration,
+                )
+                return presigned_url
+            except ClientError as e:
+                logger.error("Failed to generate presigned URL for %s: %s", clean_key, e)
 
-    if filename:
-        params["ResponseContentDisposition"] = f'attachment; filename="{filename}"'
-
-    try:
-        presigned_url = client.generate_presigned_url(
-            "get_object",
-            Params=params,
-            ExpiresIn=expiration,
-        )
-        return presigned_url
-    except ClientError as e:
-        logger.error("Failed to generate presigned URL for %s: %s", key, e)
-        return get_s3_public_url(key)
+    return get_s3_public_url(clean_key)
 
 
 def upload_file_to_s3(
@@ -149,45 +153,56 @@ def upload_file_to_s3(
     content_type: Optional[str] = None,
 ) -> str:
     """
-    Uploads a local file to AWS S3.
+    Stores the file in local media directory and optionally uploads to AWS S3 if USE_S3 is enabled.
     """
     path = Path(file_path).resolve()
     if not path.exists():
-        raise FileNotFoundError(f"File to upload not found: {path}")
+        raise FileNotFoundError(f"File not found: {path}")
 
-    client = get_s3_client()
-    if not client or not settings.AWS_S3_BUCKET:
-        logger.info("AWS S3 not configured, saved locally: %s", path)
-        return f"/media/{key}"
+    clean_key = key.lstrip("/")
+    local_target = (settings.MEDIA_DIR / clean_key).resolve()
 
-    if not content_type:
-        if path.suffix == ".pdf":
-            content_type = "application/pdf"
-        elif path.suffix == ".docx":
-            content_type = (
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
-        elif path.suffix == ".tex":
-            content_type = "text/x-tex; charset=utf-8"
-        else:
-            content_type, _ = mimetypes.guess_type(str(path))
+    # Ensure local directory exists and copy if not already at target location
+    local_target.parent.mkdir(parents=True, exist_ok=True)
+    if path != local_target:
+        import shutil
+        shutil.copy2(path, local_target)
+
+    # If S3 is enabled, upload to AWS S3
+    if settings.USE_S3 and settings.AWS_S3_BUCKET:
+        client = get_s3_client()
+        if client:
             if not content_type:
-                content_type = "application/octet-stream"
+                if path.suffix == ".pdf":
+                    content_type = "application/pdf"
+                elif path.suffix == ".docx":
+                    content_type = (
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+                elif path.suffix == ".tex":
+                    content_type = "text/x-tex; charset=utf-8"
+                else:
+                    content_type, _ = mimetypes.guess_type(str(path))
+                    if not content_type:
+                        content_type = "application/octet-stream"
 
-    extra_args = {
-        "ContentType": content_type,
-    }
+            extra_args = {
+                "ContentType": content_type,
+            }
 
-    try:
-        client.upload_file(
-            str(path),
-            settings.AWS_S3_BUCKET,
-            key,
-            ExtraArgs=extra_args,
-        )
-        s3_url = get_s3_public_url(key)
-        logger.info("Uploaded to S3: %s -> %s", path.name, s3_url)
-        return s3_url
-    except Exception as e:
-        logger.error("S3 upload failed for %s: %s", path, e)
-        return get_s3_public_url(key)
+            try:
+                client.upload_file(
+                    str(local_target),
+                    settings.AWS_S3_BUCKET,
+                    clean_key,
+                    ExtraArgs=extra_args,
+                )
+                s3_url = get_s3_public_url(clean_key)
+                logger.info("Uploaded to S3: %s -> %s", local_target.name, s3_url)
+                return s3_url
+            except Exception as e:
+                logger.error("S3 upload failed for %s: %s", local_target, e)
+
+    local_url = get_s3_public_url(clean_key)
+    logger.info("File saved to local media: %s -> %s", local_target, local_url)
+    return local_url

@@ -22,30 +22,72 @@ export async function downloadResumeFile(resumeUrl, applicationId) {
 
   const filePath = path.join(tempDir, "Resume.pdf");
 
+  // 1. Direct local file check
+  if (typeof resumeUrl === "string" && fs.existsSync(resumeUrl) && fs.statSync(resumeUrl).isFile()) {
+    logger.info("Resume file found directly on local disk", {
+      applicationId,
+      stage: "COMPOSING_EMAIL",
+      resumeUrl,
+    });
+    await fs.promises.copyFile(resumeUrl, filePath);
+    return filePath;
+  }
+
+  // 2. Resolve relative URL to absolute URL
+  let targetUrl = resumeUrl;
+  if (typeof resumeUrl === "string" && !resumeUrl.startsWith("http://") && !resumeUrl.startsWith("https://")) {
+    const baseUrl = config.resumeApi.baseUrl.replace(/\/$/, "");
+    targetUrl = `${baseUrl}/${resumeUrl.replace(/^\//, "")}`;
+  }
+
   logger.info("Downloading resume PDF to temporary path", {
     applicationId,
     stage: "COMPOSING_EMAIL",
+    targetUrl,
     filePath,
   });
 
-  try {
-    const response = await axios.get(resumeUrl, {
-      responseType: "arraybuffer",
-      timeout: 30000,
-    });
+  let lastError = null;
+  const maxAttempts = 3;
 
-    await fs.promises.writeFile(filePath, Buffer.from(response.data));
-    return filePath;
-  } catch (error) {
-    logger.error(`Failed to download resume PDF: ${error.message}`, {
-      applicationId,
-      stage: "COMPOSING_EMAIL",
-    });
-    throw new PipelineError(
-      "COMPOSING_EMAIL",
-      `Failed to download resume file from ${resumeUrl}: ${error.message}`
-    );
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await axios.get(targetUrl, {
+        responseType: "arraybuffer",
+        timeout: 30000,
+      });
+
+      await fs.promises.writeFile(filePath, Buffer.from(response.data));
+      logger.info("Successfully downloaded resume PDF attachment", {
+        applicationId,
+        stage: "COMPOSING_EMAIL",
+        attempt,
+        sizeBytes: response.data?.length || 0,
+      });
+      return filePath;
+    } catch (error) {
+      lastError = error;
+      logger.warn(`Resume download attempt ${attempt}/${maxAttempts} failed: ${error.message}`, {
+        applicationId,
+        stage: "COMPOSING_EMAIL",
+        targetUrl,
+      });
+      if (attempt < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+      }
+    }
   }
+
+  logger.error(`Failed to download resume PDF after ${maxAttempts} attempts: ${lastError?.message}`, {
+    applicationId,
+    stage: "COMPOSING_EMAIL",
+    targetUrl,
+  });
+
+  throw new PipelineError(
+    "COMPOSING_EMAIL",
+    `Failed to download resume file from ${targetUrl}: ${lastError?.message}`
+  );
 }
 
 /**

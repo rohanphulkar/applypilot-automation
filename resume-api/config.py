@@ -21,6 +21,7 @@ class Settings:
     DEBUG: bool = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8001"))
+    PUBLIC_BASE_URL: str = os.getenv("PUBLIC_BASE_URL", f"http://localhost:{PORT}")
 
     # MongoDB Configuration
     MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
@@ -30,7 +31,10 @@ class Settings:
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
-    # AWS S3 Storage
+    # Storage Mode (Set USE_S3=true only if using AWS S3)
+    USE_S3: bool = os.getenv("USE_S3", "false").lower() in ("true", "1", "t")
+
+    # AWS S3 Storage (Optional)
     AWS_ACCESS_KEY_ID: str = os.getenv("AWS_ACCESS_KEY_ID", "")
     AWS_SECRET_ACCESS_KEY: str = os.getenv("AWS_SECRET_ACCESS_KEY", "")
     AWS_REGION: str = os.getenv("AWS_REGION", "ap-south-1")
@@ -38,9 +42,9 @@ class Settings:
     S3_KEY_PREFIX: str = os.getenv("S3_KEY_PREFIX", "resumes")
     PRESIGNED_URL_EXPIRATION: int = int(os.getenv("PRESIGNED_URL_EXPIRATION", "604800"))  # 7 days
 
-    # Media & Storage Paths
+    # Media & Storage Paths (Defaults to local ./media directory)
     DATA_DIR: Path = BASE_DIR / "data"
-    MEDIA_DIR: Path = ROOT_DIR / "media" / "resumes"
+    MEDIA_DIR: Path = Path(os.getenv("MEDIA_DIR", str(BASE_DIR / "media")))
     TEMP_DIR: Path = BASE_DIR / "temp"
 
     # Master Resume File Path
