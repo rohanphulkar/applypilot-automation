@@ -1,0 +1,96 @@
+{
+  "resume_name": "Rohan Phulkar - Backend Engineer",
+  "personal": {
+    "name": "Rohan Phulkar",
+    "title": "Backend Engineer",
+    "email": "hello@rohanphulkar.com",
+    "website": "https://rohanphulkar.com",
+    "github": "https://github.com/rohanphulkar",
+    "linkedin": "https://linkedin.com/in/rohanphulkar"
+  },
+  "summary": "Backend Engineer specializing in Python, FastAPI, and PostgreSQL, experienced in designing and optimizing high-performance REST APIs and scalable backend solutions. Skilled in authentication, authorization, Redis caching, and deploying applications using Docker and AWS. Proven ability to collaborate with cross-functional teams to deliver robust backend services aligned with business goals.",
+  "skills": [
+    "Python",
+    "FastAPI",
+    "Django",
+    "Node.js",
+    "REST APIs",
+    "PostgreSQL",
+    "MySQL",
+    "Redis",
+    "Database Architecture",
+    "Query Optimization",
+    "Docker",
+    "AWS",
+    "CI/CD (GitHub Actions)",
+    "Prometheus",
+    "Grafana",
+    "Distributed Systems",
+    "Scalable Architecture",
+    "Authentication",
+    "Authorization",
+    "Identity Management"
+  ],
+  "experience": [
+    {
+      "company": "MyCareerSarthi",
+      "role": "Backend Engineer",
+      "dates": "Sep 2025 -- Present",
+      "bullets": [
+        "Engineered scalable backend services using FastAPI, PostgreSQL, and Redis to support high-performance profile and matching workflows.",
+        "Designed and optimized REST APIs for profile analysis and job matchmaking systems to enhance efficiency and relevance.",
+        "Built optimized text searching indices to improve query performance and matchmaking accuracy.",
+        "Collaborated with cross-functional teams translating business requirements into robust technical backend solutions."
+      ],
+      "tech_stack": [
+        "Python",
+        "FastAPI",
+        "PostgreSQL",
+        "Redis",
+        "GitHub Actions",
+        "Docker"
+      ]
+    },
+    {
+      "company": "Epikdoc AI",
+      "role": "Back End Developer",
+      "dates": "Sep 2024 -- Jul 2025",
+      "bullets": [
+        "Led backend development of a healthcare CRM with scalable REST APIs for patient management and appointment scheduling.",
+        "Developed secure authentication and role-based access control (RBAC) systems to safeguard data and comply with regulations.",
+        "Ensured data protection and regulatory compliance across the platform.",
+        "Utilized Docker for backend application containerization."
+      ],
+      "tech_stack": ["Python", "FastAPI", "PostgreSQL", "Docker"]
+    },
+    {
+      "company": "Hysus",
+      "role": "Full Stack Developer",
+      "dates": "Jul 2023 -- Jan 2024",
+      "bullets": [
+        "Developed backend systems and REST APIs using Django, FastAPI, Node.js, and relational databases (PostgreSQL, MySQL).",
+        "Designed relational and NoSQL database architectures for multiple domains.",
+        "Built secure authentication and authorization systems.",
+        "Delivered scalable backend solutions across healthcare, education, and SaaS sectors."
+      ],
+      "tech_stack": ["Django", "FastAPI", "Node.js", "PostgreSQL", "MySQL"]
+    },
+    {
+      "company": "Srijcon",
+      "role": "Full Stack Developer",
+      "dates": "Jun 2022 -- Jun 2023",
+      "bullets": [
+        "Developed backend services using Django and MySQL, creating scalable REST APIs.",
+        "Optimized SQL queries and database indexing to improve platform performance and response times."
+      ],
+      "tech_stack": ["Django", "MySQL", "REST APIs"]
+    }
+  ],
+  "projects": [],
+  "education": {
+    "degree": "Higher Secondary (PCM)",
+    "institution": "Government Higher Secondary School",
+    "location": "Maheshwar, Madhya Pradesh",
+    "year": "2019"
+  }
+}

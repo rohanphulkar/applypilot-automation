@@ -1,0 +1,51 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: resume-generator-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-rohan}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-Rohan007}
+      MONGO_INITDB_DATABASE: ${MONGODB_DB_NAME:-resume_generator_db}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "-u", "${MONGO_INITDB_ROOT_USERNAME:-rohan}", "-p", "${MONGO_INITDB_ROOT_PASSWORD:-Rohan007}", "--authenticationDatabase", "admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: resume-generator-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8001
+      - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-rohan}:${MONGO_INITDB_ROOT_PASSWORD:-Rohan007}@mongodb:27017/${MONGODB_DB_NAME:-resume_generator_db}?authSource=admin
+      - MONGODB_DB_NAME=${MONGODB_DB_NAME:-resume_generator_db}
+    ports:
+      - "8001:8001"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./media:/app/media
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  mongodb_data:
+    driver: local

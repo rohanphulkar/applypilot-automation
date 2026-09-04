@@ -1,0 +1,243 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@layer base {
+  :root {
+    /* Duolingo Dark Theme Tokens (Always Active) */
+    --duo-primary: #58cc02;
+    --duo-primary-dark: #46a302;
+    --duo-primary-light: #1a3818;
+    --duo-on-primary: #ffffff;
+
+    --duo-accent: #1cb0f6;
+    --duo-accent-dark: #1899d6;
+    --duo-accent-light: #162a35;
+
+    --duo-orange: #ff9600;
+    --duo-orange-dark: #e58600;
+    --duo-orange-light: #382512;
+
+    --duo-rose: #ff4b4b;
+    --duo-rose-dark: #ea2b2b;
+    --duo-rose-light: #38181a;
+
+    --duo-purple: #ce82ff;
+    --duo-purple-dark: #a855f7;
+    --duo-purple-light: #2c1838;
+
+    --duo-bg: #131f24;
+    --duo-surface: #1b2b32;
+    --duo-surface-elevated: #233a44;
+    --duo-border: #2e414c;
+    --duo-border-dark: #202f37;
+
+    --duo-text: #ffffff;
+    --duo-text-muted: #a5b6be;
+    --duo-text-subtle: #6c7f88;
+  }
+
+  body {
+    background-color: var(--duo-bg);
+    color: var(--duo-text);
+    font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  /* Custom Clean Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #58cc02;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #46a302;
+  }
+}
+
+/* =========================================================
+   DUOLINGO 3D BUTTON & CONTAINER UTILITIES
+   ========================================================= */
+
+/* Signature 3D Cards */
+.duo-card {
+  background-color: var(--duo-surface);
+  border: 2px solid var(--duo-border);
+  border-bottom: 4px solid var(--duo-border-dark);
+  border-radius: 1.25rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.duo-card-flat {
+  background-color: var(--duo-surface);
+  border: 2px solid var(--duo-border);
+  border-radius: 1.25rem;
+}
+
+/* Duolingo Signature 3D Physical Buttons */
+.duo-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #58cc02;
+  border: 2px solid #46a302;
+  border-bottom: 4px solid #46a302;
+  color: #ffffff;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: all 0.12s ease-out;
+  user-select: none;
+}
+.duo-btn-primary:hover {
+  background-color: #61e002;
+  filter: brightness(1.05);
+}
+.duo-btn-primary:active {
+  border-bottom-width: 2px;
+  transform: translateY(2px);
+}
+
+.duo-btn-accent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #1cb0f6;
+  border: 2px solid #1899d6;
+  border-bottom: 4px solid #1899d6;
+  color: #ffffff;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: all 0.12s ease-out;
+  user-select: none;
+}
+.duo-btn-accent:hover {
+  background-color: #2bc2ff;
+  filter: brightness(1.05);
+}
+.duo-btn-accent:active {
+  border-bottom-width: 2px;
+  transform: translateY(2px);
+}
+
+.duo-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--duo-surface);
+  border: 2px solid var(--duo-border);
+  border-bottom: 4px solid var(--duo-border-dark);
+  color: var(--duo-text);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: all 0.12s ease-out;
+  user-select: none;
+}
+.duo-btn-secondary:hover {
+  background-color: var(--duo-surface-elevated);
+  border-color: #3b5260;
+}
+.duo-btn-secondary:active {
+  border-bottom-width: 2px;
+  transform: translateY(2px);
+}
+
+.duo-btn-orange {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ff9600;
+  border: 2px solid #e58600;
+  border-bottom: 4px solid #e58600;
+  color: #ffffff;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: all 0.12s ease-out;
+  user-select: none;
+}
+.duo-btn-orange:hover {
+  background-color: #ffa826;
+  filter: brightness(1.05);
+}
+.duo-btn-orange:active {
+  border-bottom-width: 2px;
+  transform: translateY(2px);
+}
+
+.duo-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ff4b4b;
+  border: 2px solid #ea2b2b;
+  border-bottom: 4px solid #ea2b2b;
+  color: #ffffff;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: all 0.12s ease-out;
+  user-select: none;
+}
+.duo-btn-danger:hover {
+  background-color: #ff5f5f;
+  filter: brightness(1.05);
+}
+.duo-btn-danger:active {
+  border-bottom-width: 2px;
+  transform: translateY(2px);
+}
+
+.duo-btn-purple {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ce82ff;
+  border: 2px solid #a855f7;
+  border-bottom: 4px solid #a855f7;
+  color: #ffffff;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: all 0.12s ease-out;
+  user-select: none;
+}
+.duo-btn-purple:hover {
+  background-color: #d99bff;
+  filter: brightness(1.05);
+}
+.duo-btn-purple:active {
+  border-bottom-width: 2px;
+  transform: translateY(2px);
+}
+
+/* Gamified Pill Badges */
+.duo-pill {
+  border-radius: 9999px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-width: 2px;
+}
