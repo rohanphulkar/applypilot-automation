@@ -40,10 +40,11 @@ export async function tailorResume(jobDescription, applicationId = null) {
       }
     );
 
+    const data = response.data;
     const rawUrls = [];
 
     // Extract PDF and other artifact URLs from response
-    if (data.files) {
+    if (data?.files) {
       if (data.files.pdf?.presigned_url) rawUrls.push(data.files.pdf.presigned_url);
       else if (data.files.pdf?.s3_url) rawUrls.push(data.files.pdf.s3_url);
 
