@@ -26,10 +26,10 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
 
 # Copy dependency configuration
-COPY pyproject.toml /app/
+COPY pyproject.toml uv.lock* /app/
 
-# Install Python dependencies using uv
-RUN uv pip install --system -r <(uv pip compile pyproject.toml) || uv pip install --system .
+# Install Python dependencies using uv (POSIX /bin/sh compatible)
+RUN uv pip compile pyproject.toml -o requirements.txt && uv pip install --system -r requirements.txt
 
 # Copy application source code
 COPY . /app/
