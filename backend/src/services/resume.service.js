@@ -41,12 +41,16 @@ export async function tailorResume(jobDescription, applicationId = null) {
     );
 
     const data = response.data;
+    if (data?.status === "FAILED" || data?.success === false) {
+      throw new Error(data?.error || data?.message || "Resume API reported tailoring failure");
+    }
+
     const rawUrls = [];
 
     // Extract PDF and other artifact URLs from response
-    if (data?.files) {
-      if (data.files.pdf?.presigned_url) rawUrls.push(data.files.pdf.presigned_url);
-      else if (data.files.pdf?.s3_url) rawUrls.push(data.files.pdf.s3_url);
+    if (data?.files?.pdf) {
+      if (data.files.pdf.presigned_url) rawUrls.push(data.files.pdf.presigned_url);
+      else if (data.files.pdf.s3_url) rawUrls.push(data.files.pdf.s3_url);
 
       if (data.files.docx?.presigned_url) rawUrls.push(data.files.docx.presigned_url);
       else if (data.files.docx?.s3_url) rawUrls.push(data.files.docx.s3_url);

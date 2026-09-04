@@ -202,7 +202,6 @@ def upload_file_to_s3(
                 return s3_url
             except Exception as e:
                 logger.error("S3 upload failed for %s: %s", local_target, e)
+                raise RuntimeError(f"AWS S3 upload failed for {clean_key}: {e}")
 
-    local_url = get_s3_public_url(clean_key)
-    logger.info("File saved to local media: %s -> %s", local_target, local_url)
-    return local_url
+    return get_s3_public_url(clean_key)

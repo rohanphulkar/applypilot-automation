@@ -375,13 +375,28 @@ async def tailor_resume(
             keys=keys,
         )
         job_result = await db_get_job(job_id)
+        if not job_result or job_result.get("status") == "FAILED":
+            err_msg = job_result.get("error") if job_result else "Unknown tailoring error"
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Resume tailoring failed: {err_msg}",
+            )
+
+        files_data = job_result.get("files")
+        if files_data and "pdf" in files_data:
+            files_info = ResumeFiles(
+                tex=FileInfo(**files_data["tex"]),
+                pdf=FileInfo(**files_data["pdf"]),
+                docx=FileInfo(**files_data["docx"]),
+            )
+
         return TailorResumeResponse(
             success=True,
             job_id=job_id,
-            status=job_result.get("status", "READY") if job_result else "READY",
+            status="READY",
             filename=base_filename,
             files=files_info,
-            message="Resume tailored and uploaded successfully.",
+            message="Resume tailored and uploaded successfully to S3.",
             candidate=job_result.get("candidate") if job_result else None,
         )
 
@@ -535,13 +550,29 @@ async def generate_resume_from_json(
             timestamped_name=timestamped_name,
             keys=keys,
         )
+        job_result = await db_get_job(job_id)
+        if not job_result or job_result.get("status") == "FAILED":
+            err_msg = job_result.get("error") if job_result else "Unknown generation error"
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Resume generation failed: {err_msg}",
+            )
+
+        files_data = job_result.get("files")
+        if files_data and "pdf" in files_data:
+            files_info = ResumeFiles(
+                tex=FileInfo(**files_data["tex"]),
+                pdf=FileInfo(**files_data["pdf"]),
+                docx=FileInfo(**files_data["docx"]),
+            )
+
         return TailorResumeResponse(
             success=True,
             job_id=job_id,
             status="READY",
             filename=timestamped_name,
             files=files_info,
-            message="Resume generated and uploaded successfully.",
+            message="Resume generated and uploaded successfully to S3.",
             candidate=candidate_dict,
         )
 

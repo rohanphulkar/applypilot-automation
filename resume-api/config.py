@@ -31,10 +31,10 @@ class Settings:
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
-    # Storage Mode (Set USE_S3=true only if using AWS S3)
-    USE_S3: bool = os.getenv("USE_S3", "false").lower() in ("true", "1", "t")
+    # Storage Mode (Uses AWS S3 by default when credentials exist)
+    USE_S3: bool = os.getenv("USE_S3", "true").lower() in ("true", "1", "t")
 
-    # AWS S3 Storage (Optional)
+    # AWS S3 Storage
     AWS_ACCESS_KEY_ID: str = os.getenv("AWS_ACCESS_KEY_ID", "")
     AWS_SECRET_ACCESS_KEY: str = os.getenv("AWS_SECRET_ACCESS_KEY", "")
     AWS_REGION: str = os.getenv("AWS_REGION", "ap-south-1")
