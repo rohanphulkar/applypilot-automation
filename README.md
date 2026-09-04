@@ -13,35 +13,10 @@ ApplyPilot is a complete, production-ready, full-stack platform designed to auto
 
 ---
 
-## 🐳 Docker Deployment (Single-Command Setup)
-
-Run the entire platform (**MongoDB**, **Redis**, **Resume Tailoring API**, **Backend Express API**, **BullMQ Background Worker**, and **Frontend with Nginx Gateway**) with a single command:
-
-```bash
-docker compose up --build -d
-```
-
-### Accessing the Platform:
-- **Web Application & UI (Nginx Gateway)**: [http://localhost](http://localhost) (or [http://localhost:3000](http://localhost:3000))
-- **Backend REST API**: [http://localhost:5000](http://localhost:5000)
-- **Resume Generator API**: [http://localhost:8001](http://localhost:8001)
-- **MongoDB**: `localhost:27017`
-- **Redis**: `localhost:6379`
-
----
-
 ## 📁 Architecture & Services Breakdown
 
 ```text
 applypilot/
-├── docker-compose.yml            # Unified single-file container orchestration
-├── .env                          # Unified platform environment variables
-│
-├── frontend/                     # React 19 + Vite + Duolingo Dark Theme
-│   ├── src/                      # UI Components, Pages, Layouts, Zustand store
-│   ├── nginx.conf                # Nginx SPA router & API reverse proxy
-│   └── Dockerfile                # Multi-stage build (Node -> Nginx)
-│
 ├── backend/                      # Node.js + Express + BullMQ + Mongoose
 │   ├── src/
 │   │   ├── config/               # Centralized configuration
@@ -52,13 +27,17 @@ applypilot/
 │   │   ├── workers/              # Idempotent BullMQ pipeline worker
 │   │   ├── server.js             # API server entrypoint
 │   │   └── worker.js             # Dedicated worker entrypoint
-│   └── Dockerfile
+│   └── package.json
+│
+├── frontend/                     # React 19 + Vite + Duolingo Dark Theme
+│   ├── src/                      # UI Components, Pages, Layouts, Zustand store
+│   └── package.json
 │
 ├── resume-api/                   # Python FastAPI + pdflatex + ATS Engine
 │   ├── routers/                  # /api/resume/tailor & /api/jobs
 │   ├── services/                 # LaTeX compiler, DOCX, S3 presigned URLs
 │   ├── main.py
-│   └── Dockerfile
+│   └── pyproject.toml
 │
 └── media/                        # Generated PDF/DOCX local storage
 ```

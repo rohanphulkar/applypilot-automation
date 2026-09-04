@@ -6,7 +6,6 @@
 [![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o--mini-412991.svg)](https://openai.com)
 [![AWS S3](https://img.shields.io/badge/AWS-S3_Storage-FF9900.svg)](https://aws.amazon.com/s3/)
 [![LaTeX](https://img.shields.io/badge/LaTeX-pdflatex-008080.svg)](https://www.latex-project.org/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://www.docker.com/)
 
 A high-performance, asynchronous Python **FastAPI** microservice engineered for ATS 92+ resume tailoring with OpenAI, programmatic LaTeX `.tex` generation, `.pdf` compilation via `pdflatex`, `.docx` Word document creation, MongoDB persistence, and AWS S3 storage with instant non-blocking presigned download URLs.
 
@@ -61,7 +60,6 @@ A high-performance, asynchronous Python **FastAPI** microservice engineered for 
   - **PDF (`.pdf`)**: Native `pdflatex` compilation with automatic auxiliary cleanup (`.aux`, `.log`, `.out`).
   - **Word (`.docx`)**: Clean `python-docx` layout with 7.5" right-aligned tab stops, Calibri font, XML borders (`#CCCCCC`), and dark blue links (`#1a56db`).
 - **RESTful Job Management**: Full CRUD endpoints for web and mobile apps to list, search, filter, view, and delete tailored jobs.
-- **Docker & Compose Ready**: Multi-stage `Dockerfile` with full LaTeX toolchain and `docker-compose.yml` for unified API and MongoDB deployment.
 
 ---
 
@@ -69,9 +67,6 @@ A high-performance, asynchronous Python **FastAPI** microservice engineered for 
 
 ```
 resume-api/
-├── Dockerfile                   # Production container with pdflatex & uv
-├── docker-compose.yml           # Unified Compose stack (API + MongoDB)
-├── .dockerignore                # Optimized build exclusions
 ├── .env                         # Environment variables (MongoDB, OpenAI, AWS S3)
 ├── .env.example                 # Template configuration
 ├── pyproject.toml               # Dependencies, metadata & CLI runner scripts
@@ -100,14 +95,12 @@ resume-api/
 
 ## Quick Start
 
-### Option A: Local Development with `uv`
-
-#### 1. Prerequisites
+### 1. Prerequisites
 - **Python 3.12+**
 - **MongoDB 7.0+**
 - **pdflatex** (`sudo apt-get install -y texlive-latex-base texlive-latex-extra texlive-fonts-recommended`)
 
-#### 2. Install & Configure
+### 2. Install & Configure
 ```bash
 cd resume-api
 cp .env.example .env
@@ -115,29 +108,13 @@ cp .env.example .env
 uv sync
 ```
 
-#### 3. Run the Service
+### 3. Run the Service
 ```bash
 # Using CLI script entrypoint
 uv run resume-api
 
 # Or using uvicorn directly
 uv run uvicorn main:app --host 0.0.0.0 --port 8001 --reload
-```
-
----
-
-### Option B: Docker Compose Deployment
-
-To build and launch the API and MongoDB containers together:
-
-```bash
-cd resume-api
-docker compose up --build -d
-```
-
-To stop containers:
-```bash
-docker compose down
 ```
 
 ---
