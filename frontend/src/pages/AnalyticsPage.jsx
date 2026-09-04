@@ -126,7 +126,7 @@ export function AnalyticsPage() {
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trendData}>
+              <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="cyanGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#1cb0f6" stopOpacity={0.4} />
@@ -138,8 +138,8 @@ export function AnalyticsPage() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                <XAxis dataKey="day" stroke="#888888" fontSize={11} />
-                <YAxis stroke="#888888" fontSize={11} />
+                <XAxis dataKey="day" stroke="#888888" fontSize={11} tickLine={false} />
+                <YAxis stroke="#888888" fontSize={11} tickLine={false} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#1b2b32",

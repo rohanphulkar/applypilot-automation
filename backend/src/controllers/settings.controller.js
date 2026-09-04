@@ -121,7 +121,40 @@ export async function getHealthStatus(req, res) {
   });
 }
 
+/**
+ * GET or POST /api/settings/test-email
+ * Executes direct connection and authentication tests for both SMTP and IMAP.
+ */
+export async function testEmailConnection(req, res, next) {
+  try {
+    const { verifySmtpConnection, verifyImapConnection } = await import(
+      "../services/email.service.js"
+    );
+
+    const [smtpResult, imapResult] = await Promise.all([
+      verifySmtpConnection(),
+      verifyImapConnection(),
+    ]);
+
+    const allOk = smtpResult.ok && imapResult.ok;
+
+    return res.status(allOk ? 200 : 502).json({
+      success: allOk,
+      message: allOk
+        ? "SMTP and IMAP configurations verified successfully!"
+        : "Email connection verification failed.",
+      diagnostics: {
+        smtp: smtpResult,
+        imap: imapResult,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export default {
   getSettings,
   getHealthStatus,
+  testEmailConnection,
 };

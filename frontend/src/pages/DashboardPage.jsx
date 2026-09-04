@@ -10,7 +10,6 @@ import {
   Send,
   PlusCircle,
   Activity,
-  Flame,
 } from "lucide-react";
 import { getDashboardStats } from "../services/dashboard.service.js";
 import { StatCard } from "../components/common/StatCard.jsx";
@@ -40,25 +39,25 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-200 select-none">
-      {/* Friendly Duolingo Mascot Hero Banner */}
-      <div className="duo-card p-6 md:p-8 bg-white dark:bg-[#1b2b32] flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-200 select-none">
+      {/* Friendly Mascot Hero Banner */}
+      <div className="duo-card p-4 sm:p-6 md:p-8 bg-white dark:bg-[#1b2b32] flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-6 relative overflow-hidden">
         <div className="relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#d7ffb8] dark:bg-[#1a3818] border-2 border-[#58cc02] text-[#58a700] dark:text-[#a5ed6e] text-xs font-black uppercase mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#d7ffb8] dark:bg-[#1a3818] border-2 border-[#58cc02] text-[#58a700] dark:text-[#a5ed6e] text-xs font-black uppercase mb-2 sm:mb-3">
             <Sparkles size={14} className="stroke-[2.5]" /> Automated Job Application Pipeline
           </div>
-          <h2 className="text-2xl md:text-3xl font-black text-[#3c3c3c] dark:text-white tracking-tight">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-[#3c3c3c] dark:text-white tracking-tight">
             Welcome to ApplyPilot! 👋
           </h2>
-          <p className="text-xs md:text-sm text-[#777777] dark:text-[#a5b6be] mt-1.5 max-w-xl font-bold leading-relaxed">
+          <p className="text-xs sm:text-sm text-[#777777] dark:text-[#a5b6be] mt-1 sm:mt-1.5 max-w-xl font-bold leading-relaxed">
             Your personal job application automation pilot. Submit any job description to automatically extract requirements, tailor an ATS-ready resume, draft a customized cover letter, and deliver it to recruiters with full Sent-folder synchronization.
           </p>
         </div>
 
-        <div className="relative z-10 shrink-0">
+        <div className="relative z-10 shrink-0 w-full sm:w-auto">
           <Link
             to="/applications/new"
-            className="duo-btn-primary px-6 py-3.5 text-xs font-black tracking-wider flex items-center gap-2"
+            className="w-full sm:w-auto duo-btn-primary px-5 sm:px-6 py-3 sm:py-3.5 text-xs font-black tracking-wider flex items-center justify-center gap-2"
           >
             <PlusCircle size={18} className="stroke-[3]" />
             <span>START APPLICATION</span>

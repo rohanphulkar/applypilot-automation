@@ -1,5 +1,5 @@
-import React from "react";
-import { NavLink, Link } from "react-router-dom";
+import React, { useEffect } from "react";
+import { NavLink, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
@@ -31,6 +31,23 @@ const NAV_ITEMS = [
 
 export function AppSidebar() {
   const { sidebarCollapsed, toggleSidebar, mobileMenuOpen, setMobileMenuOpen } = useUIStore();
+  const location = useLocation();
+
+  // Automatically close mobile menu on page navigation
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname, setMobileMenuOpen]);
+
+  // Handle Escape key to close mobile drawer
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mobileMenuOpen, setMobileMenuOpen]);
 
   const { data: healthData } = useQuery({
     queryKey: ["systemHealth"],

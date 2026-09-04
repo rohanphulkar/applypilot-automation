@@ -8,7 +8,12 @@ export async function getHealth() {
   return api.get("/health");
 }
 
+export async function testEmailConnection() {
+  return api.get("/api/settings/test-email");
+}
+
 export default {
   getSettings,
   getHealth,
+  testEmailConnection,
 };

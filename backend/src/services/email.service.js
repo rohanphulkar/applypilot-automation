@@ -190,6 +190,80 @@ export async function buildRawMimeMessage({
 }
 
 /**
+ * Creates a configured Nodemailer SMTP transporter with hardened timeouts and IPv4 preference.
+ *
+ * @returns {import('nodemailer').Transporter}
+ */
+export function createSmtpTransporter() {
+  return nodemailer.createTransport({
+    host: config.email.smtp.host,
+    port: config.email.smtp.port,
+    secure: config.email.smtp.secure, // true for 465 (SSL), false for 587 (STARTTLS)
+    auth: {
+      user: config.email.address,
+      pass: config.email.password,
+    },
+    // Prevent VPS hangs: strict timeouts for connection, greeting, and socket inactivity
+    connectionTimeout: config.email.smtp.connectionTimeout || 15000,
+    greetingTimeout: config.email.smtp.greetingTimeout || 15000,
+    socketTimeout: config.email.smtp.socketTimeout || 30000,
+    dnsTimeout: 10000,
+    // IPv4 preference (family 4) prevents Linux VPS dual-stack DNS resolution from hanging on dead IPv6 routes
+    family: config.email.smtp.family || 4,
+    tls: {
+      rejectUnauthorized: false,
+      servername: config.email.smtp.host,
+      minVersion: "TLSv1.2",
+    },
+    pool: false,
+  });
+}
+
+/**
+ * Creates a configured ImapFlow client with hardened timeouts and safe TLS options.
+ *
+ * @returns {ImapFlow}
+ */
+export function createImapClient() {
+  return new ImapFlow({
+    host: config.email.imap.host,
+    port: config.email.imap.port,
+    secure: config.email.imap.secure, // true for 993, false for 143
+    auth: {
+      user: config.email.address,
+      pass: config.email.password,
+    },
+    // Prevent VPS hangs: strict timeouts for IMAP connect and socket operations
+    connectionTimeout: config.email.imap.connectionTimeout || 15000,
+    greetingTimeout: config.email.imap.greetingTimeout || 15000,
+    socketTimeout: config.email.imap.socketTimeout || 30000,
+    tls: {
+      rejectUnauthorized: false,
+      servername: config.email.imap.host,
+      minVersion: "TLSv1.2",
+    },
+    logger: false,
+    emitLogs: false,
+  });
+}
+
+/**
+ * Helper to run a promise with an overarching hard timeout safeguard.
+ */
+function withTimeout(promise, ms, operationName) {
+  let timer;
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`${operationName} timed out after ${ms}ms`));
+    }, ms);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    clearTimeout(timer);
+  });
+}
+
+/**
  * Sends a raw MIME message via any configured SMTP provider (Spacemail, Gmail, Outlook, Custom).
  *
  * @param {Buffer} rawMimeBuffer - The compiled MIME email buffer
@@ -198,37 +272,40 @@ export async function buildRawMimeMessage({
  * @returns {Promise<object>} SMTP send info
  */
 export async function sendMimeViaSmtp(rawMimeBuffer, { from, to }, applicationId = null) {
-  logger.info(`Sending application email via SMTP to ${to} (${config.email.smtp.host}:${config.email.smtp.port})`, {
-    applicationId,
-    stage: "SENDING_EMAIL",
-  });
+  logger.info(
+    `Sending application email via SMTP to ${to} (${config.email.smtp.host}:${config.email.smtp.port}, secure=${config.email.smtp.secure})`,
+    {
+      applicationId,
+      stage: "SENDING_EMAIL",
+      smtpHost: config.email.smtp.host,
+      smtpPort: config.email.smtp.port,
+      smtpSecure: config.email.smtp.secure,
+    }
+  );
 
-  const transporter = nodemailer.createTransport({
-    host: config.email.smtp.host,
-    port: config.email.smtp.port,
-    secure: config.email.smtp.secure, // true for 465, false for 587 / STARTTLS
-    auth: {
-      user: config.email.address,
-      pass: config.email.password,
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
-  });
+  const transporter = createSmtpTransporter();
 
   try {
-    const info = await transporter.sendMail({
+    const sendPromise = transporter.sendMail({
       envelope: {
-        from,
+        from: from || config.email.address,
         to: [to],
       },
       raw: rawMimeBuffer,
     });
 
+    // Guard with a 45-second overall hard timeout to guarantee the worker never hangs
+    const info = await withTimeout(
+      sendPromise,
+      45000,
+      `SMTP send to ${config.email.smtp.host}:${config.email.smtp.port}`
+    );
+
     logger.info("Successfully sent email via SMTP", {
       applicationId,
       stage: "SENDING_EMAIL",
       smtpMessageId: info.messageId,
+      response: info.response,
     });
 
     return info;
@@ -236,11 +313,20 @@ export async function sendMimeViaSmtp(rawMimeBuffer, { from, to }, applicationId
     logger.error(`SMTP send failed: ${error.message}`, {
       applicationId,
       stage: "SENDING_EMAIL",
+      host: config.email.smtp.host,
+      port: config.email.smtp.port,
+      code: error.code,
     });
     throw new PipelineError(
       "SENDING_EMAIL",
-      `Failed to send email via SMTP (${config.email.smtp.host}): ${error.message}`
+      `Failed to send email via SMTP (${config.email.smtp.host}:${config.email.smtp.port}): ${error.message}`
     );
+  } finally {
+    try {
+      transporter.close();
+    } catch (_) {
+      // Ignore transporter close errors
+    }
   }
 }
 
@@ -262,23 +348,17 @@ export async function appendMimeToSentFolder(rawMimeBuffer, applicationId = null
     return { skipped: true };
   }
 
-  logger.info(`Connecting to IMAP server (${config.email.imap.host}:${config.email.imap.port}) for Sent folder append`, {
-    applicationId,
-    stage: "SAVING_TO_SENT",
-  });
+  logger.info(
+    `Connecting to IMAP server (${config.email.imap.host}:${config.email.imap.port}, secure=${config.email.imap.secure}) for Sent folder append`,
+    {
+      applicationId,
+      stage: "SAVING_TO_SENT",
+    }
+  );
 
-  const client = new ImapFlow({
-    host: config.email.imap.host,
-    port: config.email.imap.port,
-    secure: config.email.imap.secure,
-    auth: {
-      user: config.email.address,
-      pass: config.email.password,
-    },
-    logger: false,
-  });
+  const client = createImapClient();
 
-  try {
+  const imapOperation = async () => {
     await client.connect();
 
     // 1. Discover the Sent mailbox dynamically across any provider
@@ -315,8 +395,8 @@ export async function appendMimeToSentFolder(rawMimeBuffer, applicationId = null
       for (const candidate of candidates) {
         const found = mailboxes.find(
           (mb) =>
-            mb.name.toLowerCase() === candidate.toLowerCase() ||
-            mb.path.toLowerCase() === candidate.toLowerCase()
+            mb.name?.toLowerCase() === candidate.toLowerCase() ||
+            mb.path?.toLowerCase() === candidate.toLowerCase()
         );
         if (found) {
           sentMailbox = found;
@@ -335,8 +415,6 @@ export async function appendMimeToSentFolder(rawMimeBuffer, applicationId = null
     // 2. Append the exact raw MIME email buffer with \Seen flag
     const result = await client.append(targetFolder, rawMimeBuffer, ["\\Seen"]);
 
-    await client.logout();
-
     logger.info("Successfully appended MIME message to Sent folder via IMAP", {
       applicationId,
       stage: "SAVING_TO_SENT",
@@ -344,22 +422,141 @@ export async function appendMimeToSentFolder(rawMimeBuffer, applicationId = null
     });
 
     return result;
-  } catch (error) {
-    try {
-      await client.logout();
-    } catch (_) {
-      // Ignore logout error during cleanup
-    }
+  };
 
+  try {
+    // Guard with a 35-second overall hard timeout to guarantee worker never hangs
+    return await withTimeout(
+      imapOperation(),
+      35000,
+      `IMAP append to ${config.email.imap.host}:${config.email.imap.port}`
+    );
+  } catch (error) {
     logger.error(`IMAP Sent-folder append failed: ${error.message}`, {
       applicationId,
       stage: "SAVING_TO_SENT",
+      host: config.email.imap.host,
+      port: config.email.imap.port,
     });
 
     throw new PipelineError(
       "SAVING_TO_SENT",
       `Failed to save email to Sent folder via IMAP (${config.email.imap.host}): ${error.message}`
     );
+  } finally {
+    // Force close IMAP socket immediately to prevent lingering connections on VPS
+    try {
+      client.close();
+    } catch (_) {
+      // Ignore cleanup error
+    }
+  }
+}
+
+/**
+ * Diagnostics: Verifies SMTP credentials and connection handshake.
+ *
+ * @returns {Promise<{ ok: boolean, latencyMs: number, message: string, error?: string }>}
+ */
+export async function verifySmtpConnection() {
+  const startTime = Date.now();
+  const transporter = createSmtpTransporter();
+
+  try {
+    const verifyPromise = transporter.verify();
+    await withTimeout(verifyPromise, 15000, "SMTP verify connection");
+    const latencyMs = Date.now() - startTime;
+    return {
+      ok: true,
+      latencyMs,
+      message: `SMTP connection and authentication succeeded in ${latencyMs}ms (${config.email.smtp.host}:${config.email.smtp.port})`,
+      host: config.email.smtp.host,
+      port: config.email.smtp.port,
+      secure: config.email.smtp.secure,
+    };
+  } catch (error) {
+    const latencyMs = Date.now() - startTime;
+    return {
+      ok: false,
+      latencyMs,
+      message: `SMTP connection failed after ${latencyMs}ms: ${error.message}`,
+      error: error.message,
+      host: config.email.smtp.host,
+      port: config.email.smtp.port,
+      secure: config.email.smtp.secure,
+    };
+  } finally {
+    try {
+      transporter.close();
+    } catch (_) {}
+  }
+}
+
+/**
+ * Diagnostics: Verifies IMAP credentials, connection, and discovers Sent folder.
+ *
+ * @returns {Promise<{ ok: boolean, latencyMs: number, message: string, sentFolder?: string, error?: string }>}
+ */
+export async function verifyImapConnection() {
+  if (!config.email.imap.enabled) {
+    return {
+      ok: true,
+      skipped: true,
+      message: "IMAP is disabled in configuration.",
+    };
+  }
+
+  const startTime = Date.now();
+  const client = createImapClient();
+
+  try {
+    const checkOp = async () => {
+      await client.connect();
+      const mailboxes = await client.list();
+      let sentMailboxName = "Sent";
+      for (const mb of mailboxes) {
+        if (
+          mb.specialUse === "\\Sent" ||
+          (Array.isArray(mb.specialUse) && mb.specialUse.includes("\\Sent"))
+        ) {
+          sentMailboxName = mb.path || mb.name;
+          break;
+        }
+      }
+      return {
+        mailboxesCount: mailboxes.length,
+        sentFolder: sentMailboxName,
+      };
+    };
+
+    const details = await withTimeout(checkOp(), 15000, "IMAP verify connection");
+    const latencyMs = Date.now() - startTime;
+
+    return {
+      ok: true,
+      latencyMs,
+      message: `IMAP connection and authentication succeeded in ${latencyMs}ms (${config.email.imap.host}:${config.email.imap.port})`,
+      host: config.email.imap.host,
+      port: config.email.imap.port,
+      secure: config.email.imap.secure,
+      sentFolder: details.sentFolder,
+      mailboxesCount: details.mailboxesCount,
+    };
+  } catch (error) {
+    const latencyMs = Date.now() - startTime;
+    return {
+      ok: false,
+      latencyMs,
+      message: `IMAP connection failed after ${latencyMs}ms: ${error.message}`,
+      error: error.message,
+      host: config.email.imap.host,
+      port: config.email.imap.port,
+      secure: config.email.imap.secure,
+    };
+  } finally {
+    try {
+      client.close();
+    } catch (_) {}
   }
 }
 
@@ -368,6 +565,10 @@ export default {
   cleanupTemporaryFiles,
   generateMessageId,
   buildRawMimeMessage,
+  createSmtpTransporter,
+  createImapClient,
   sendMimeViaSmtp,
   appendMimeToSentFolder,
+  verifySmtpConnection,
+  verifyImapConnection,
 };

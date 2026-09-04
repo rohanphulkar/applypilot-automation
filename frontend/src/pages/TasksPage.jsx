@@ -145,7 +145,7 @@ export function TasksPage() {
         <LoadingSkeleton count={5} type="table" />
       ) : tasksList.length > 0 ? (
         <div className="duo-card p-4 overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-160 text-left border-collapse text-xs">
             <thead>
               <tr className="border-b-2 border-[#e5e5e5] dark:border-[#2e414c] text-[11px] font-black uppercase tracking-wider text-[#777777] dark:text-[#a5b6be] bg-[#f7f9fa] dark:bg-[#233a44]">
                 <th className="py-3.5 px-4 rounded-tl-xl">Task ID</th>

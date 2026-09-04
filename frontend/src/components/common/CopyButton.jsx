@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Copy, Check } from "lucide-react";
 
-export function CopyButton({ text, label = "Copy", className = "", size = "sm" }) {
+export function CopyButton({ text, label = "Copy", className = "" }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async (e) => {

@@ -44,12 +44,24 @@
     -moz-osx-font-smoothing: grayscale;
     margin: 0;
     min-height: 100vh;
+    overflow-x: hidden;
+    touch-action: manipulation;
+  }
+
+  /* Prevent auto-zoom on mobile safari when focusing inputs */
+  input, textarea, select {
+    font-size: 16px;
+  }
+  @media (min-width: 640px) {
+    input, textarea, select {
+      font-size: 0.875rem;
+    }
   }
 
   /* Custom Clean Scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
@@ -60,6 +72,23 @@
   }
   ::-webkit-scrollbar-thumb:hover {
     background: #46a302;
+  }
+
+  /* Utility for hiding scrollbar when needed */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* iOS Safe Area Utilities */
+  .pb-safe {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0.75rem));
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
   }
 }
 

@@ -2,12 +2,12 @@ import React from "react";
 import { FileText, ExternalLink } from "lucide-react";
 import { CopyButton } from "../common/CopyButton.jsx";
 
-export function ResumeCard({ urls = [], status = "COMPLETED" }) {
+export function ResumeCard({ urls = [] }) {
   if (!urls || urls.length === 0) {
     return (
-      <div className="duo-card p-8 text-center select-none">
+      <div className="duo-card p-6 sm:p-8 text-center select-none">
         <FileText size={28} className="mx-auto text-[#1cb0f6] mb-2 animate-pulse stroke-[2.5]" />
-        <p className="text-sm font-black text-[#3c3c3c] dark:text-white">
+        <p className="text-xs sm:text-sm font-black text-[#3c3c3c] dark:text-white">
           Tailored resume is generating or waiting for the Resume API.
         </p>
       </div>

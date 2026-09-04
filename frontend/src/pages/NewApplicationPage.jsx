@@ -81,31 +81,31 @@ export function NewApplicationPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-200 select-none">
+    <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-200 select-none">
       {/* Header Banner */}
-      <div className="text-center space-y-2">
+      <div className="text-center space-y-1.5 sm:space-y-2">
         <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#d7ffb8] dark:bg-[#1a3818] border-2 border-[#58cc02] text-[#58a700] dark:text-[#a5ed6e] text-xs font-black uppercase mb-1">
-          <Sparkles size={15} className="stroke-[2.5]" /> 100% Background Automated Pipeline
+          <Sparkles size={14} className="stroke-[2.5]" /> 100% Background Automated Pipeline
         </div>
-        <h2 className="text-3xl font-black text-[#3c3c3c] dark:text-white tracking-tight">
+        <h2 className="text-2xl sm:text-3xl font-black text-[#3c3c3c] dark:text-white tracking-tight">
           Start a New Job Application
         </h2>
-        <p className="text-xs md:text-sm text-[#777777] dark:text-[#a5b6be] max-w-xl mx-auto font-bold leading-relaxed">
+        <p className="text-xs sm:text-sm text-[#777777] dark:text-[#a5b6be] max-w-xl mx-auto font-bold leading-relaxed px-2">
           Paste any raw job posting. ApplyPilot will extract the role requirements, tailor your resume, craft an executive cover letter, compile the RFC 5322 MIME email, and transmit it with Sent-folder sync.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
         {/* Main Textarea Card */}
-        <div className="duo-card p-6 md:p-8 relative">
-          <div className="flex items-center justify-between mb-3">
+        <div className="duo-card p-4 sm:p-6 md:p-8 relative">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3">
             <label
               htmlFor="job_description"
               className="text-xs font-black uppercase tracking-wider text-[#3c3c3c] dark:text-white"
             >
               Job Posting Description
             </label>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-start sm:self-auto">
               <button
                 type="button"
                 onClick={handleLoadSample}
@@ -128,17 +128,17 @@ export function NewApplicationPage() {
 
           <textarea
             id="job_description"
-            rows={12}
+            rows={10}
             value={jobDescription}
             onChange={(e) => {
               setJobDescription(e.target.value);
               if (errorMsg) setErrorMsg("");
             }}
             placeholder="Paste the complete job description, requirements, responsibilities, and recruiter contact info here..."
-            className="w-full p-4 rounded-2xl bg-[#f7f9fa] dark:bg-[#233a44] border-2 border-[#e5e5e5] dark:border-[#2e414c] text-xs font-mono font-bold leading-relaxed text-[#3c3c3c] dark:text-white placeholder:text-[#afafaf] focus:outline-hidden focus:border-[#1cb0f6] resize-y transition-colors"
+            className="w-full p-3.5 sm:p-4 rounded-2xl bg-[#f7f9fa] dark:bg-[#233a44] border-2 border-[#e5e5e5] dark:border-[#2e414c] text-xs font-mono font-bold leading-relaxed text-[#3c3c3c] dark:text-white placeholder:text-[#afafaf] focus:outline-hidden focus:border-[#1cb0f6] resize-y transition-colors"
           />
 
-          <div className="flex items-center justify-between mt-3 text-[11px] font-bold text-[#777777] dark:text-[#a5b6be]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mt-3 text-[11px] font-bold text-[#777777] dark:text-[#a5b6be]">
             <span>Ensure the posting includes recruiter/application contact email.</span>
             <span className="font-mono">{jobDescription.length} characters</span>
           </div>
@@ -151,12 +151,12 @@ export function NewApplicationPage() {
         </div>
 
         {/* Automated Steps Checklist Card */}
-        <div className="p-6 rounded-2xl bg-[#ddf4ff] dark:bg-[#162a35] border-2 border-[#1cb0f6] border-b-4 border-b-[#1899d6]">
-          <h4 className="text-xs font-black uppercase tracking-wider text-[#1899d6] dark:text-[#1cb0f6] mb-4 flex items-center gap-2">
+        <div className="p-4 sm:p-6 rounded-2xl bg-[#ddf4ff] dark:bg-[#162a35] border-2 border-[#1cb0f6] border-b-4 border-b-[#1899d6]">
+          <h4 className="text-xs font-black uppercase tracking-wider text-[#1899d6] dark:text-[#1cb0f6] mb-3 sm:mb-4 flex items-center gap-2">
             <Zap size={16} className="text-[#ff9600] stroke-[2.5]" /> Automated Pipeline Checklist
           </h4>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs font-black text-[#3c3c3c] dark:text-white">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3 text-xs font-black text-[#3c3c3c] dark:text-white">
             <div className="flex items-center gap-2">
               <CheckCircle2 size={16} className="text-[#58cc02] shrink-0 stroke-[3]" />
               <span>OpenAI Structured Parsing</span>
@@ -184,12 +184,12 @@ export function NewApplicationPage() {
           </div>
         </div>
 
-        {/* Big 3D Duolingo CTA Submit Button */}
+        {/* Big 3D CTA Submit Button */}
         <div className="flex items-center justify-end gap-3 pt-2">
           <button
             type="submit"
             disabled={mutation.isPending}
-            className="w-full sm:w-auto duo-btn-primary px-8 py-4 text-sm font-black tracking-wider flex items-center justify-center gap-2.5 disabled:opacity-50"
+            className="w-full sm:w-auto duo-btn-primary px-6 sm:px-8 py-3.5 sm:py-4 text-xs sm:text-sm font-black tracking-wider flex items-center justify-center gap-2.5 disabled:opacity-50"
           >
             {mutation.isPending ? (
               <>

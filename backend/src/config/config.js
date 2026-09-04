@@ -64,7 +64,7 @@ const config = {
         process.env.SPACEMAIL_SMTP_HOST ||
         "mail.spacemail.com",
       port: parseInt(
-        process.env.SMTP_PORT || process.env.SPACEMAIL_SMTP_PORT || "465",
+        process.env.SMTP_PORT || process.env.SPACEMAIL_SMTP_PORT || "587",
         10
       ),
       secure:
@@ -72,7 +72,12 @@ const config = {
           ? process.env.SMTP_SECURE === "true"
           : process.env.SPACEMAIL_SMTP_SECURE !== undefined
           ? process.env.SPACEMAIL_SMTP_SECURE === "true"
-          : true,
+          : parseInt(process.env.SMTP_PORT || process.env.SPACEMAIL_SMTP_PORT || "587", 10) === 465,
+      // IPv4 preference (family 4) prevents VPS dual-stack DNS resolution from hanging on non-routable IPv6 addresses
+      family: parseInt(process.env.SMTP_IP_FAMILY || "4", 10),
+      connectionTimeout: parseInt(process.env.SMTP_CONNECTION_TIMEOUT || "15000", 10),
+      greetingTimeout: parseInt(process.env.SMTP_GREETING_TIMEOUT || "15000", 10),
+      socketTimeout: parseInt(process.env.SMTP_SOCKET_TIMEOUT || "30000", 10),
     },
 
     imap: {
@@ -93,7 +98,10 @@ const config = {
           ? process.env.IMAP_SECURE === "true"
           : process.env.SPACEMAIL_IMAP_SECURE !== undefined
           ? process.env.SPACEMAIL_IMAP_SECURE === "true"
-          : true,
+          : parseInt(process.env.IMAP_PORT || process.env.SPACEMAIL_IMAP_PORT || "993", 10) === 993,
+      connectionTimeout: parseInt(process.env.IMAP_CONNECTION_TIMEOUT || "15000", 10),
+      greetingTimeout: parseInt(process.env.IMAP_GREETING_TIMEOUT || "15000", 10),
+      socketTimeout: parseInt(process.env.IMAP_SOCKET_TIMEOUT || "30000", 10),
     },
   },
 

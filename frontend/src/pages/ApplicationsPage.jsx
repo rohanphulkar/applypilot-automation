@@ -102,10 +102,10 @@ export function ApplicationsPage() {
       </div>
 
       {/* Filter Toolbar Card */}
-      <div className="duo-card p-4 space-y-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div className="duo-card p-3.5 sm:p-4 space-y-3 sm:space-y-4">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           {/* Search Box */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 max-w-full md:max-w-md">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#afafaf] stroke-[2.5]" />
             <input
               type="text"
@@ -120,14 +120,14 @@ export function ApplicationsPage() {
           </div>
 
           {/* Right Filters & View Switch */}
-          <div className="flex items-center gap-2.5 justify-end">
+          <div className="flex items-center gap-2 sm:gap-2.5 justify-between sm:justify-end">
             {/* Sort Dropdown */}
             <div className="flex items-center gap-1.5 text-xs font-black text-[#777777] dark:text-[#a5b6be]">
-              <ArrowUpDown size={14} className="stroke-[2.5]" />
+              <ArrowUpDown size={14} className="stroke-[2.5] shrink-0" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="bg-[#f7f9fa] dark:bg-[#233a44] border-2 border-[#e5e5e5] dark:border-[#2e414c] rounded-xl px-3 py-1.5 text-xs font-black text-[#3c3c3c] dark:text-white focus:outline-hidden focus:border-[#1cb0f6]"
+                className="bg-[#f7f9fa] dark:bg-[#233a44] border-2 border-[#e5e5e5] dark:border-[#2e414c] rounded-xl px-2.5 py-1.5 text-xs font-black text-[#3c3c3c] dark:text-white focus:outline-hidden focus:border-[#1cb0f6]"
               >
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
@@ -137,7 +137,7 @@ export function ApplicationsPage() {
             </div>
 
             {/* View Mode Toggle */}
-            <div className="flex items-center p-1 bg-[#f7f9fa] dark:bg-[#233a44] border-2 border-[#e5e5e5] dark:border-[#2e414c] rounded-2xl">
+            <div className="flex items-center p-1 bg-[#f7f9fa] dark:bg-[#233a44] border-2 border-[#e5e5e5] dark:border-[#2e414c] rounded-2xl shrink-0">
               <button
                 type="button"
                 onClick={() => setViewMode("table")}
@@ -167,7 +167,7 @@ export function ApplicationsPage() {
         </div>
 
         {/* Status Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 border-t-2 border-[#e5e5e5] dark:border-[#2e414c] pt-3">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1 border-t-2 border-[#e5e5e5] dark:border-[#2e414c] pt-3 -mx-1 px-1">
           <span className="text-[10px] font-black text-[#777777] dark:text-[#a5b6be] uppercase tracking-wider mr-1 shrink-0">
             FILTER:
           </span>
@@ -182,7 +182,7 @@ export function ApplicationsPage() {
                   setStatusFilter(filter.id);
                   setPage(1);
                 }}
-                className={`px-3.5 py-1 rounded-full text-xs font-black uppercase whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-3 sm:px-3.5 py-1 rounded-full text-xs font-black uppercase whitespace-nowrap transition-all cursor-pointer ${
                   isSelected
                     ? "bg-[#58cc02] text-white border-2 border-[#46a302] shadow-xs"
                     : "bg-[#f7f9fa] dark:bg-[#233a44] text-[#777777] dark:text-[#a5b6be] hover:bg-[#e5e5e5] dark:hover:bg-[#2e414c] border-2 border-transparent"

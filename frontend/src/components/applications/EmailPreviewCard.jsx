@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Mail, Send, Save, Paperclip, CheckCircle2, AlertCircle, Clock, FileText, RotateCw } from "lucide-react";
+import { Mail, CheckCircle2, AlertCircle, Clock, FileText, RotateCw } from "lucide-react";
 import { formatDate } from "../../utils/formatters.js";
 import { CopyButton } from "../common/CopyButton.jsx";
 
@@ -75,10 +75,10 @@ export function EmailPreviewCard({
   return (
     <div className="duo-card overflow-hidden select-none">
       {/* Header Info */}
-      <div className="p-6 border-b-2 border-[#e5e5e5] dark:border-[#2e414c] bg-[#f7f9fa] dark:bg-[#233a44]">
+      <div className="p-4 sm:p-6 border-b-2 border-[#e5e5e5] dark:border-[#2e414c] bg-[#f7f9fa] dark:bg-[#233a44]">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#ddf4ff] dark:bg-[#162a35] border-2 border-[#1cb0f6] text-[#1cb0f6] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-[#ddf4ff] dark:bg-[#162a35] border-2 border-[#1cb0f6] text-[#1cb0f6] flex items-center justify-center shrink-0">
               <Mail size={16} className="stroke-[2.5]" />
             </div>
             <h3 className="font-black text-sm text-[#3c3c3c] dark:text-white uppercase tracking-wide">
@@ -102,36 +102,36 @@ export function EmailPreviewCard({
         </div>
 
         <div className="space-y-2 text-xs font-mono">
-          <div className="flex items-start gap-2">
-            <span className="w-20 font-black text-[#777777] dark:text-[#a5b6be] uppercase text-[10px]">From:</span>
-            <span className="text-[#3c3c3c] dark:text-white font-black">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
+            <span className="w-24 font-black text-[#777777] dark:text-[#a5b6be] uppercase text-[10px] shrink-0">From:</span>
+            <span className="text-[#3c3c3c] dark:text-white font-black break-all">
               Rohan Phulkar &lt;hello@rohanphulkar.com&gt;
             </span>
           </div>
-          <div className="flex items-start gap-2">
-            <span className="w-20 font-black text-[#777777] dark:text-[#a5b6be] uppercase text-[10px]">To:</span>
-            <span className="text-[#3c3c3c] dark:text-white font-black">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
+            <span className="w-24 font-black text-[#777777] dark:text-[#a5b6be] uppercase text-[10px] shrink-0">To:</span>
+            <span className="text-[#3c3c3c] dark:text-white font-black break-all">
               {recruiterEmail || "Pending extraction..."}
             </span>
           </div>
-          <div className="flex items-start gap-2">
-            <span className="w-20 font-black text-[#777777] dark:text-[#a5b6be] uppercase text-[10px]">Subject:</span>
-            <span className="text-[#3c3c3c] dark:text-white font-bold">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
+            <span className="w-24 font-black text-[#777777] dark:text-[#a5b6be] uppercase text-[10px] shrink-0">Subject:</span>
+            <span className="text-[#3c3c3c] dark:text-white font-bold wrap-break-word">
               {subject || "Pending composition..."}
             </span>
           </div>
           {messageId && (
-            <div className="flex items-center gap-2">
-              <span className="w-20 font-black text-[#777777] dark:text-[#a5b6be] uppercase text-[10px]">Message-ID:</span>
-              <span className="text-[#777777] dark:text-[#a5b6be] truncate max-w-md">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+              <span className="w-24 font-black text-[#777777] dark:text-[#a5b6be] uppercase text-[10px] shrink-0">Message-ID:</span>
+              <span className="text-[#777777] dark:text-[#a5b6be] truncate max-w-md break-all">
                 {messageId}
               </span>
               <CopyButton text={messageId} label="Copy ID" />
             </div>
           )}
           {sentAt && (
-            <div className="flex items-start gap-2">
-              <span className="w-20 font-black text-[#777777] dark:text-[#a5b6be] uppercase text-[10px]">Sent Date:</span>
+            <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
+              <span className="w-24 font-black text-[#777777] dark:text-[#a5b6be] uppercase text-[10px] shrink-0">Sent Date:</span>
               <span className="text-[#3c3c3c] dark:text-[#e5e5e5] font-bold">
                 {formatDate(sentAt)}
               </span>

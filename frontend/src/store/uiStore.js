@@ -4,7 +4,7 @@ import { create } from "zustand";
 document.documentElement.classList.add("dark");
 localStorage.setItem("applypilot_theme", "dark");
 
-export const useUIStore = create((set, get) => ({
+export const useUIStore = create((set) => ({
   theme: "dark",
   sidebarCollapsed: false,
   mobileMenuOpen: false,

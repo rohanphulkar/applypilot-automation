@@ -32,7 +32,6 @@ import { ResumeCard } from "../components/applications/ResumeCard.jsx";
 import { TimelineFeed } from "../components/common/TimelineFeed.jsx";
 import { CopyButton } from "../components/common/CopyButton.jsx";
 import { ConfirmDialog } from "../components/common/ConfirmDialog.jsx";
-import { LoadingSkeleton } from "../components/common/LoadingSkeleton.jsx";
 import { formatDate, formatSalary } from "../utils/formatters.js";
 
 const TABS = [
@@ -240,7 +239,7 @@ export function ApplicationDetailsPage() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 overflow-x-auto border-b-2 border-[#e5e5e5] dark:border-[#2e414c] pb-px">
+      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar border-b-2 border-[#e5e5e5] dark:border-[#2e414c] pb-px -mx-2 px-2 sm:mx-0 sm:px-0">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -250,13 +249,13 @@ export function ApplicationDetailsPage() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all border-b-4 cursor-pointer ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 text-[11px] sm:text-xs font-black uppercase tracking-wider whitespace-nowrap transition-all border-b-4 cursor-pointer ${
                 isActive
                   ? "border-[#58cc02] text-[#58a700] dark:text-[#a5ed6e] bg-white/50 dark:bg-[#1b2b32]/50 rounded-t-xl"
                   : "border-transparent text-[#777777] dark:text-[#a5b6be] hover:text-[#3c3c3c] dark:hover:text-white"
               }`}
             >
-              <Icon size={16} className="stroke-[2.5]" />
+              <Icon size={15} className="stroke-[2.5]" />
               <span>{tab.label}</span>
             </button>
           );

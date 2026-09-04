@@ -2,12 +2,12 @@ import React from "react";
 import { CopyButton } from "../common/CopyButton.jsx";
 import { Sparkles, FileText } from "lucide-react";
 
-export function CoverLetterViewer({ content, status = "COMPLETED" }) {
+export function CoverLetterViewer({ content }) {
   if (!content) {
     return (
-      <div className="duo-card p-8 text-center select-none">
+      <div className="duo-card p-6 sm:p-8 text-center select-none">
         <Sparkles size={28} className="mx-auto text-[#ce82ff] mb-2 animate-pulse stroke-[2.5]" />
-        <p className="text-sm font-black text-[#3c3c3c] dark:text-white">
+        <p className="text-xs sm:text-sm font-black text-[#3c3c3c] dark:text-white">
           Cover letter generation is in progress or not yet triggered.
         </p>
       </div>

@@ -55,8 +55,8 @@ export function ProgressStepper({ currentStatus, progress = 0, isFailed = false 
         />
       </div>
 
-      {/* Step Nodes */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      {/* Step Nodes - Responsive Carousel on Mobile, Grid on Desktop */}
+      <div className="flex overflow-x-auto no-scrollbar gap-2.5 pb-2 -mx-1 px-1 sm:grid sm:grid-cols-4 lg:grid-cols-7 sm:gap-3 sm:overflow-visible sm:pb-0 sm:mx-0 sm:px-0">
         {STAGES.map((stage, idx) => {
           const Icon = stage.icon;
           const isDone = currentStatus === "COMPLETED" || idx < currentIndex;
@@ -84,20 +84,20 @@ export function ProgressStepper({ currentStatus, progress = 0, isFailed = false 
           return (
             <div
               key={stage.id}
-              className={`flex flex-col items-center text-center p-3 rounded-2xl transition-all ${cardStyle}`}
+              className={`flex flex-col items-center text-center p-2.5 sm:p-3 rounded-2xl transition-all min-w-24 sm:min-w-0 flex-1 shrink-0 sm:shrink ${cardStyle}`}
             >
               <div
-                className={`w-9 h-9 rounded-2xl flex items-center justify-center mb-2 text-xs transition-transform ${iconBg}`}
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-2xl flex items-center justify-center mb-1.5 sm:mb-2 text-xs transition-transform ${iconBg}`}
               >
                 {isDone ? (
-                  <Check size={18} strokeWidth={3} />
+                  <Check size={16} strokeWidth={3} />
                 ) : isStageFailed ? (
-                  <AlertTriangle size={18} strokeWidth={3} />
+                  <AlertTriangle size={16} strokeWidth={3} />
                 ) : (
-                  <Icon size={18} strokeWidth={2.5} className={isCurrent ? "animate-pulse" : ""} />
+                  <Icon size={16} strokeWidth={2.5} className={isCurrent ? "animate-pulse" : ""} />
                 )}
               </div>
-              <span className={`text-[11px] leading-tight uppercase font-black tracking-wide ${textStyle}`}>
+              <span className={`text-[10px] sm:text-[11px] leading-tight uppercase font-black tracking-wide ${textStyle}`}>
                 {stage.label}
               </span>
             </div>
