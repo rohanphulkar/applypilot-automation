@@ -43,7 +43,7 @@ export async function downloadResumeFile(resumeUrl, applicationId, customFilenam
   if (!resolvedFilename) {
     resolvedFilename = "Rohan_Phulkar_Resume.pdf";
   }
-  if (!resolvedFilename.toLowerCase().endsWith(".pdf")) {
+  if (!path.extname(resolvedFilename)) {
     resolvedFilename += ".pdf";
   }
 
@@ -169,6 +169,7 @@ export async function buildRawMimeMessage({
   html,
   messageId,
   resumeFilePath,
+  attachments = [],
 }) {
   const senderFrom =
     from ||
@@ -191,13 +192,31 @@ export async function buildRawMimeMessage({
     attachments: [],
   };
 
+  // Add individual resumeFilePath if provided
   if (resumeFilePath && fs.existsSync(resumeFilePath)) {
     const finalFilename = path.basename(resumeFilePath) || "Rohan_Phulkar_Resume.pdf";
     mailOptions.attachments.push({
       filename: finalFilename,
       path: resumeFilePath,
-      contentType: "application/pdf",
+      contentType: finalFilename.endsWith(".docx")
+        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        : "application/pdf",
     });
+  }
+
+  // Add custom attachments array
+  if (Array.isArray(attachments)) {
+    for (const att of attachments) {
+      if (att && att.path && fs.existsSync(att.path)) {
+        mailOptions.attachments.push({
+          filename: att.filename || path.basename(att.path),
+          path: att.path,
+          contentType: att.contentType || (att.filename?.endsWith(".docx")
+            ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            : "application/pdf"),
+        });
+      }
+    }
   }
 
   const composer = new MailComposer(mailOptions);

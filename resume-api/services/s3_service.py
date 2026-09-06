@@ -114,9 +114,10 @@ def generate_presigned_download_url(
     key: str,
     expiration: Optional[int] = None,
     filename: Optional[str] = None,
+    inline: bool = False,
 ) -> str:
     """
-    Generates a download URL.
+    Generates a presigned URL.
     Uses AWS S3 Presigned URL when USE_S3=true and configured;
     otherwise returns direct local FastAPI /media URL.
     """
@@ -131,7 +132,11 @@ def generate_presigned_download_url(
                 "Bucket": settings.AWS_S3_BUCKET,
                 "Key": clean_key,
             }
-            if filename:
+            if inline:
+                params["ResponseContentDisposition"] = "inline"
+                if clean_key.endswith(".pdf"):
+                    params["ResponseContentType"] = "application/pdf"
+            elif filename:
                 params["ResponseContentDisposition"] = f'attachment; filename="{filename}"'
 
             try:

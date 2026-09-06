@@ -67,13 +67,18 @@ export async function tailorResume(jobDescription, applicationId = null) {
     }
 
     const baseUrl = config.resumeApi.baseUrl.replace(/\/$/, "");
-    const urls = rawUrls.map((u) => {
+    const formatUrl = (u) => {
       if (!u) return null;
       if (u.startsWith("http://") || u.startsWith("https://")) return u;
       return `${baseUrl}/${u.replace(/^\//, "")}`;
-    }).filter(Boolean);
+    };
 
+    const urls = rawUrls.map(formatUrl).filter(Boolean);
     const primaryUrl = urls[0];
+
+    const pdfRaw = data?.files?.pdf?.presigned_url || data?.files?.pdf?.s3_url || rawUrls.find(u => u?.includes(".pdf")) || urls[0];
+    const docxRaw = data?.files?.docx?.presigned_url || data?.files?.docx?.s3_url || rawUrls.find(u => u?.includes(".docx")) || urls.find(u => u?.includes(".docx"));
+    const texRaw = data?.files?.tex?.presigned_url || data?.files?.tex?.s3_url || rawUrls.find(u => u?.includes(".tex")) || urls.find(u => u?.includes(".tex"));
 
     logger.info("Successfully received tailored resume URLs", {
       applicationId,
@@ -85,6 +90,10 @@ export async function tailorResume(jobDescription, applicationId = null) {
     return {
       urls,
       primaryUrl,
+      pdfUrl: formatUrl(pdfRaw),
+      docxUrl: formatUrl(docxRaw),
+      texUrl: formatUrl(texRaw),
+      candidateData: data?.candidate || null,
       filename: data?.filename || null,
     };
   } catch (error) {

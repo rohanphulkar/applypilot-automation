@@ -103,14 +103,60 @@ export async function sendApplicationEmailPipeline(applicationId, userId = null,
       `Dispatching approved application email to ${job.email.recruiterEmail}`
     );
 
-    // Download primary resume PDF for email attachment if available
-    const primaryResumeUrl = job.resume?.urls?.[0];
-    if (primaryResumeUrl) {
-      resumeFilePath = await downloadResumeFile(
-        primaryResumeUrl,
-        applicationId,
-        job.resume?.filename ? `${job.resume.filename}.pdf` : null
-      );
+    // Determine attachment format (PDF, DOCX, BOTH, NONE)
+    const attachmentFormat =
+      customOverrides.attachmentFormat ||
+      job.resume?.attachmentFormat ||
+      "PDF";
+
+    const attachments = [];
+    const baseName = job.resume?.filename
+      ? job.resume.filename.replace(/\.[^/.]+$/, "")
+      : "Rohan_Phulkar_Resume";
+
+    if (attachmentFormat === "PDF" || attachmentFormat === "BOTH") {
+      const pdfUrl =
+        job.resume?.pdfUrl ||
+        job.resume?.urls?.find((u) => u.includes(".pdf")) ||
+        job.resume?.urls?.[0];
+
+      if (pdfUrl) {
+        const filePath = await downloadResumeFile(
+          pdfUrl,
+          applicationId,
+          `${baseName}.pdf`
+        );
+        if (filePath) {
+          attachments.push({
+            filename: `${baseName}.pdf`,
+            path: filePath,
+            contentType: "application/pdf",
+          });
+        }
+      }
+    }
+
+    if (attachmentFormat === "DOCX" || attachmentFormat === "BOTH") {
+      const docxUrl =
+        job.resume?.docxUrl ||
+        job.resume?.urls?.find((u) => u.includes(".docx")) ||
+        job.resume?.urls?.[1];
+
+      if (docxUrl) {
+        const filePath = await downloadResumeFile(
+          docxUrl,
+          applicationId,
+          `${baseName}.docx`
+        );
+        if (filePath) {
+          attachments.push({
+            filename: `${baseName}.docx`,
+            path: filePath,
+            contentType:
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          });
+        }
+      }
     }
 
     if (!job.email.messageId) {
@@ -141,7 +187,7 @@ export async function sendApplicationEmailPipeline(applicationId, userId = null,
       text: textBody,
       html: htmlBody,
       messageId: job.email.messageId,
-      resumeFilePath,
+      attachments,
     });
 
     // Send via SMTP
@@ -310,14 +356,25 @@ export async function processApplicationJob(bullmqJob) {
       );
 
       job.resume.urls = resumeResult.urls;
+      job.resume.pdfUrl = resumeResult.pdfUrl || resumeResult.urls?.[0];
+      job.resume.docxUrl =
+        resumeResult.docxUrl ||
+        resumeResult.urls?.find((u) => u.includes(".docx"));
+      job.resume.texUrl =
+        resumeResult.texUrl ||
+        resumeResult.urls?.find((u) => u.includes(".tex"));
+      if (resumeResult.candidateData) {
+        job.resume.candidateData = resumeResult.candidateData;
+      }
       if (resumeResult.filename) {
         job.resume.filename = resumeResult.filename;
       }
       job.resume.requestStatus = "COMPLETED";
+      job.markModified("resume");
       job.timeline.push({
         stage: "TAILORING_RESUME",
         status: "COMPLETED",
-        message: `Generated ${resumeResult.urls.length} tailored resume format(s)`,
+        message: `Generated ${resumeResult.urls.length} tailored resume format(s) (PDF & DOCX ready)`,
         createdAt: new Date(),
       });
       await job.save();

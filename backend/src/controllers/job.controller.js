@@ -193,7 +193,7 @@ export async function updateJob(req, res, next) {
   try {
     const { id } = req.params;
     const userId = req.auth?.userId;
-    const { coverLetter, email, parsedJob } = req.body;
+    const { coverLetter, email, parsedJob, attachmentFormat, resume } = req.body;
 
     const query = {
       $or: [{ jobId: id }, ...(id.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: id }] : [])],
@@ -256,10 +256,25 @@ export async function updateJob(req, res, next) {
       job.markModified("email");
     }
 
+    if (attachmentFormat !== undefined) {
+      if (!job.resume) job.resume = {};
+      job.resume.attachmentFormat = attachmentFormat;
+      job.markModified("resume");
+    }
+
+    if (resume) {
+      if (!job.resume) job.resume = {};
+      if (resume.attachmentFormat !== undefined) job.resume.attachmentFormat = resume.attachmentFormat;
+      if (resume.pdfUrl !== undefined) job.resume.pdfUrl = resume.pdfUrl;
+      if (resume.docxUrl !== undefined) job.resume.docxUrl = resume.docxUrl;
+      if (resume.urls !== undefined) job.resume.urls = resume.urls;
+      job.markModified("resume");
+    }
+
     job.timeline.push({
       stage: job.status,
       status: "UPDATED",
-      message: "Application details and cover letter draft updated by user.",
+      message: "Application details updated by user.",
       createdAt: new Date(),
     });
 
@@ -311,6 +326,11 @@ export async function sendJobEmail(req, res, next) {
     }
     if (customOverrides.recruiterEmail) {
       job.email.recruiterEmail = customOverrides.recruiterEmail.trim().toLowerCase();
+    }
+    if (customOverrides.attachmentFormat) {
+      if (!job.resume) job.resume = {};
+      job.resume.attachmentFormat = customOverrides.attachmentFormat;
+      job.markModified("resume");
     }
 
     if (!job.email.recruiterEmail) {

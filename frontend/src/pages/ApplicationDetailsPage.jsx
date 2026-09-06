@@ -33,7 +33,7 @@ import { StatusBadge } from "../components/common/StatusBadge.jsx";
 import { ProgressStepper } from "../components/common/ProgressStepper.jsx";
 import { CoverLetterViewer } from "../components/applications/CoverLetterViewer.jsx";
 import { EmailPreviewCard } from "../components/applications/EmailPreviewCard.jsx";
-import { ResumeCard } from "../components/applications/ResumeCard.jsx";
+import { GoogleDocsResumePreview } from "../components/applications/GoogleDocsResumePreview.jsx";
 import { TimelineFeed } from "../components/common/TimelineFeed.jsx";
 import { CopyButton } from "../components/common/CopyButton.jsx";
 import { ConfirmDialog } from "../components/common/ConfirmDialog.jsx";
@@ -82,6 +82,42 @@ export function ApplicationDetailsPage() {
 
   const updateMutation = useMutation({
     mutationFn: (updateData) => updateApplication(id, updateData),
+    onMutate: async (newUpdate) => {
+      await queryClient.cancelQueries({ queryKey: ["application", id] });
+      const previous = queryClient.getQueryData(["application", id]);
+      if (previous?.data) {
+        const optimistic = { ...previous.data };
+        if (newUpdate.attachmentFormat !== undefined) {
+          optimistic.resume = {
+            ...optimistic.resume,
+            attachmentFormat: newUpdate.attachmentFormat,
+          };
+        }
+        if (newUpdate.coverLetter !== undefined) {
+          optimistic.coverLetter = {
+            ...optimistic.coverLetter,
+            content: typeof newUpdate.coverLetter === "string" ? newUpdate.coverLetter : newUpdate.coverLetter?.content,
+          };
+          optimistic.email = {
+            ...optimistic.email,
+            body: optimistic.coverLetter.content,
+          };
+        }
+        if (newUpdate.email !== undefined) {
+          optimistic.email = {
+            ...optimistic.email,
+            ...newUpdate.email,
+          };
+        }
+        queryClient.setQueryData(["application", id], { data: optimistic });
+      }
+      return { previous };
+    },
+    onError: (err, newUpdate, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["application", id], context.previous);
+      }
+    },
     onSuccess: (res) => {
       const updatedJob = res?.data?.data || res?.data;
       if (updatedJob) {
@@ -94,7 +130,14 @@ export function ApplicationDetailsPage() {
   });
 
   const sendMutation = useMutation({
-    mutationFn: (overrides = {}) => sendApplicationEmail(id, overrides),
+    mutationFn: (overrides = {}) => {
+      const currentApp = queryClient.getQueryData(["application", id])?.data;
+      const payload = {
+        attachmentFormat: overrides.attachmentFormat || currentApp?.resume?.attachmentFormat || "PDF",
+        ...overrides,
+      };
+      return sendApplicationEmail(id, payload);
+    },
     onSuccess: () => {
       setShowSendConfirm(false);
       confetti({
@@ -171,6 +214,25 @@ export function ApplicationDetailsPage() {
     updateMutation.mutate({ email: headers });
   };
 
+  const handleUpdateAttachmentFormat = (format) => {
+    updateMutation.mutate({ attachmentFormat: format });
+  };
+
+  const getAttachmentLabel = (fmt) => {
+    switch (fmt) {
+      case "PDF":
+        return "Resume PDF (Recommended)";
+      case "DOCX":
+        return "Resume Word DOCX";
+      case "BOTH":
+        return "Both PDF & Word DOCX";
+      case "NONE":
+        return "Cover Letter Body Only (No attachment)";
+      default:
+        return "Resume PDF";
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200 select-none">
       {/* Back Link & Header Actions */}
@@ -199,6 +261,27 @@ export function ApplicationDetailsPage() {
                 <>
                   <Send size={14} className="stroke-[3]" />
                   <span>APPROVE & SEND EMAIL</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {(app.status === "COMPLETED" || app.email?.smtpStatus === "SENT") && !isAwaitingApproval && (
+            <button
+              type="button"
+              onClick={() => setShowSendConfirm(true)}
+              disabled={sendMutation.isPending}
+              className="duo-btn-secondary px-4 py-2 text-xs font-black flex items-center gap-1.5 cursor-pointer text-[#1cb0f6]"
+            >
+              {sendMutation.isPending ? (
+                <>
+                  <RotateCw size={14} className="animate-spin" />
+                  <span>DISPATCHING...</span>
+                </>
+              ) : (
+                <>
+                  <RotateCw size={14} className="stroke-[2.5]" />
+                  <span>RESEND EMAIL</span>
                 </>
               )}
             </button>
@@ -588,9 +671,11 @@ export function ApplicationDetailsPage() {
 
       {/* TAB 3: RESUME */}
       {activeTab === "resume" && (
-        <ResumeCard
-          urls={app.resume?.urls || []}
-          status={app.resume?.requestStatus || "PENDING"}
+        <GoogleDocsResumePreview
+          resume={app.resume}
+          parsedJob={app.parsedJob}
+          onUpdateAttachmentFormat={handleUpdateAttachmentFormat}
+          isUpdating={updateMutation.isPending}
         />
       )}
 
@@ -609,10 +694,14 @@ export function ApplicationDetailsPage() {
         <EmailPreviewCard
           email={app.email || {}}
           resumeUrls={app.resume?.urls || []}
+          attachmentFormat={app.resume?.attachmentFormat || "PDF"}
+          pdfUrl={app.resume?.pdfUrl}
+          docxUrl={app.resume?.docxUrl}
           status={app.status}
           onRetry={() => retryMutation.mutate()}
           onSend={() => setShowSendConfirm(true)}
           onUpdateEmail={handleUpdateEmailHeaders}
+          onUpdateAttachmentFormat={handleUpdateAttachmentFormat}
           isSending={sendMutation.isPending}
           isRetrying={retryMutation.isPending}
         />
@@ -645,14 +734,24 @@ export function ApplicationDetailsPage() {
         </div>
       )}
 
-      {/* Send Approval Confirmation Dialog */}
+      {/* Send Approval / Resend Confirmation Dialog */}
       <ConfirmDialog
         isOpen={showSendConfirm}
-        title="Approve & Send Application Email?"
-        message={`This will compile the tailored resume PDF attachment, generate the RFC 5322 MIME email message, deliver it via SMTP to "${app.email?.recruiterEmail || 'recruiter'}", and synchronize with your IMAP Sent folder.`}
-        confirmText={sendMutation.isPending ? "Sending..." : "Approve & Send Now"}
+        title={
+          app.email?.smtpStatus === "SENT" || app.status === "COMPLETED"
+            ? "Resend Application Email?"
+            : "Approve & Send Application Email?"
+        }
+        message={`This will deliver your tailored email to "${app.email?.recruiterEmail || 'recruiter'}" with attachment format: [${getAttachmentLabel(app.resume?.attachmentFormat || 'PDF')}], and synchronize with your IMAP Sent folder.`}
+        confirmText={
+          sendMutation.isPending
+            ? "Dispatching..."
+            : app.email?.smtpStatus === "SENT" || app.status === "COMPLETED"
+            ? "Resend Email Now"
+            : "Approve & Send Now"
+        }
         variant="primary"
-        onConfirm={() => sendMutation.mutate()}
+        onConfirm={() => sendMutation.mutate({ attachmentFormat: app.resume?.attachmentFormat || "PDF" })}
         onCancel={() => setShowSendConfirm(false)}
       />
 

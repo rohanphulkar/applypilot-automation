@@ -94,8 +94,20 @@ const jobSchema = new mongoose.Schema(
         type: [String],
         default: [],
       },
+      pdfUrl: { type: String, default: null },
+      docxUrl: { type: String, default: null },
+      texUrl: { type: String, default: null },
       filename: {
         type: String,
+        default: null,
+      },
+      attachmentFormat: {
+        type: String,
+        enum: ["PDF", "DOCX", "BOTH", "NONE"],
+        default: "PDF",
+      },
+      candidateData: {
+        type: mongoose.Schema.Types.Mixed,
         default: null,
       },
     },

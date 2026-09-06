@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Mail,
   CheckCircle2,
@@ -10,6 +10,9 @@ import {
   Edit3,
   Save,
   CheckCheck,
+  Paperclip,
+  Download,
+  ExternalLink,
 } from "lucide-react";
 import { formatDate } from "../../utils/formatters.js";
 import { CopyButton } from "../common/CopyButton.jsx";
@@ -17,15 +20,26 @@ import { CopyButton } from "../common/CopyButton.jsx";
 export function EmailPreviewCard({
   email = {},
   resumeUrls = [],
+  attachmentFormat = "PDF",
+  pdfUrl,
+  docxUrl,
   status = "QUEUED",
   onRetry,
   onSend,
   onUpdateEmail,
+  onUpdateAttachmentFormat,
   isSending = false,
   isRetrying = false,
 }) {
   const [viewMode, setViewMode] = useState("rendered"); // "rendered" | "plain"
   const [isEditingHeaders, setIsEditingHeaders] = useState(false);
+  const [selectedFormat, setSelectedFormat] = useState(attachmentFormat || "PDF");
+
+  useEffect(() => {
+    if (attachmentFormat) {
+      setSelectedFormat(attachmentFormat);
+    }
+  }, [attachmentFormat]);
 
   const {
     recruiterEmail = "",
@@ -40,7 +54,7 @@ export function EmailPreviewCard({
   const [editedTo, setEditedTo] = useState(recruiterEmail || "");
   const [editedSubject, setEditedSubject] = useState(subject || "");
 
-  React.useEffect(() => {
+  useEffect(() => {
     setEditedTo(recruiterEmail || "");
     setEditedSubject(subject || "");
   }, [recruiterEmail, subject]);
@@ -300,55 +314,137 @@ export function EmailPreviewCard({
       </div>
 
       {/* Attachments & Action Footer */}
-      <div className="px-6 py-4 border-t-2 border-[#e5e5e5] dark:border-[#2e414c] bg-[#f7f9fa] dark:bg-[#233a44] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        {resumeUrls && resumeUrls.length > 0 ? (
-          <div className="inline-flex items-center gap-3 p-2.5 bg-white dark:bg-[#1b2b32] border-2 border-[#e5e5e5] dark:border-[#2e414c] rounded-2xl shadow-xs">
-            <div className="w-9 h-9 rounded-xl bg-[#d7ffb8] dark:bg-[#1a3818] border-2 border-[#58cc02] text-[#58a700] dark:text-[#a5ed6e] flex items-center justify-center shrink-0">
-              <FileText size={16} className="stroke-[2.5]" />
-            </div>
-            <div>
-              <span className="text-xs font-black text-[#3c3c3c] dark:text-white block">
-                Resume.pdf
-              </span>
-              <span className="text-[10px] font-bold text-[#777777] dark:text-[#a5b6be]">
-                Ready for SMTP delivery
-              </span>
-            </div>
-            <a
-              href={resumeUrls[0]}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ml-3 duo-btn-primary px-3 py-1 text-xs font-black"
-            >
-              PREVIEW
-            </a>
+      <div className="p-4 sm:p-6 border-t-2 border-[#e5e5e5] dark:border-[#2e414c] bg-[#f7f9fa] dark:bg-[#233a44] space-y-4">
+        {/* Attachment Format Selector Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3.5 rounded-2xl bg-white dark:bg-[#1b2b32] border-2 border-[#e5e5e5] dark:border-[#2e414c]">
+          <div className="flex items-center gap-2">
+            <Paperclip size={16} className="text-[#1cb0f6] stroke-[2.5]" />
+            <span className="text-xs font-black uppercase tracking-wider text-[#3c3c3c] dark:text-white">
+              Email Attachment Format:
+            </span>
           </div>
-        ) : (
-          <div className="text-xs text-[#777777] dark:text-[#a5b6be] font-bold">
-            No resume attachment yet
-          </div>
-        )}
 
-        {isAwaitingApproval && onSend && (
-          <button
-            type="button"
-            onClick={onSend}
-            disabled={isSending}
-            className="duo-btn-primary px-6 py-3 text-xs font-black flex items-center justify-center gap-2 self-start sm:self-auto cursor-pointer disabled:opacity-50"
-          >
-            {isSending ? (
-              <>
-                <RotateCw size={15} className="animate-spin" />
-                <span>DISPATCHING SMTP EMAIL...</span>
-              </>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {[
+              { id: "PDF", label: "PDF Only" },
+              { id: "DOCX", label: "DOCX Only" },
+              { id: "BOTH", label: "Both (PDF & DOCX)" },
+              { id: "NONE", label: "None (Body Only)" },
+            ].map((opt) => {
+              const isSelected = selectedFormat === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedFormat(opt.id);
+                    if (onUpdateAttachmentFormat) onUpdateAttachmentFormat(opt.id);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all cursor-pointer ${
+                    isSelected
+                      ? "bg-[#58cc02] text-white shadow-xs"
+                      : "bg-[#f7f9fa] dark:bg-[#233a44] text-[#777777] dark:text-[#a5b6be] hover:text-[#3c3c3c] dark:hover:text-white border-2 border-[#e5e5e5] dark:border-[#2e414c]"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Selected Attached Files Display & Send / Resend Action */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {selectedFormat === "NONE" ? (
+              <div className="inline-flex items-center gap-2 px-3.5 py-2 bg-white dark:bg-[#1b2b32] border-2 border-[#e5e5e5] dark:border-[#2e414c] rounded-2xl text-xs font-bold text-[#777777] dark:text-[#a5b6be]">
+                <Mail size={15} className="text-[#ff9600]" />
+                <span>No attachment • Direct email body only</span>
+              </div>
             ) : (
               <>
-                <Send size={15} className="stroke-[3]" />
-                <span>APPROVE & SEND EMAIL NOW</span>
+                {(selectedFormat === "PDF" || selectedFormat === "BOTH" || !selectedFormat) && (
+                  <div className="inline-flex items-center gap-2.5 p-2 bg-white dark:bg-[#1b2b32] border-2 border-[#e5e5e5] dark:border-[#2e414c] rounded-2xl shadow-xs">
+                    <div className="w-8 h-8 rounded-xl bg-[#ffe5e5] dark:bg-[#38181a] border-2 border-[#ff4b4b] text-[#ff4b4b] flex items-center justify-center shrink-0">
+                      <FileText size={15} className="stroke-[2.5]" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-[#3c3c3c] dark:text-white block leading-tight">
+                        Resume.pdf
+                      </span>
+                      <span className="text-[10px] font-bold text-[#58a700] dark:text-[#a5ed6e]">
+                        Attached for SMTP
+                      </span>
+                    </div>
+                    {(pdfUrl || resumeUrls[0]) && (
+                      <a
+                        href={pdfUrl || resumeUrls[0]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-2 duo-btn-secondary px-2.5 py-1 text-[11px] font-black inline-flex items-center gap-1"
+                      >
+                        <ExternalLink size={11} className="stroke-[2.5]" /> View
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {(selectedFormat === "DOCX" || selectedFormat === "BOTH") && (
+                  <div className="inline-flex items-center gap-2.5 p-2 bg-white dark:bg-[#1b2b32] border-2 border-[#e5e5e5] dark:border-[#2e414c] rounded-2xl shadow-xs">
+                    <div className="w-8 h-8 rounded-xl bg-[#ddf4ff] dark:bg-[#162a35] border-2 border-[#1cb0f6] text-[#1cb0f6] flex items-center justify-center shrink-0">
+                      <FileText size={15} className="stroke-[2.5]" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-[#3c3c3c] dark:text-white block leading-tight">
+                        Resume.docx
+                      </span>
+                      <span className="text-[10px] font-bold text-[#1cb0f6]">
+                        Attached for SMTP
+                      </span>
+                    </div>
+                    {(docxUrl || resumeUrls.find((u) => u.includes(".docx")) || resumeUrls[1]) && (
+                      <a
+                        href={docxUrl || resumeUrls.find((u) => u.includes(".docx")) || resumeUrls[1]}
+                        download="Resume.docx"
+                        className="ml-2 duo-btn-secondary px-2.5 py-1 text-[11px] font-black inline-flex items-center gap-1"
+                      >
+                        <Download size={11} className="stroke-[2.5]" /> Download
+                      </a>
+                    )}
+                  </div>
+                )}
               </>
             )}
-          </button>
-        )}
+          </div>
+
+          {onSend && (
+            <button
+              type="button"
+              onClick={onSend}
+              disabled={isSending}
+              className={`${
+                smtpStatus === "SENT" ? "duo-btn-secondary" : "duo-btn-primary"
+              } px-6 py-3 text-xs font-black flex items-center justify-center gap-2 self-start sm:self-auto cursor-pointer disabled:opacity-50 shrink-0`}
+            >
+              {isSending ? (
+                <>
+                  <RotateCw size={15} className="animate-spin" />
+                  <span>DISPATCHING SMTP EMAIL...</span>
+                </>
+              ) : smtpStatus === "SENT" ? (
+                <>
+                  <RotateCw size={15} className="stroke-[2.5]" />
+                  <span>RESEND EMAIL TO RECRUITER</span>
+                </>
+              ) : (
+                <>
+                  <Send size={15} className="stroke-[3]" />
+                  <span>APPROVE & SEND EMAIL NOW</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
