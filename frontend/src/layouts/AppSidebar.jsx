@@ -8,24 +8,16 @@ import {
   Settings,
   PlusCircle,
   Sparkles,
-  Server,
-  Database,
-  Radio,
-  Mail,
   ChevronLeft,
   ChevronRight,
-  Zap,
   X,
 } from "lucide-react";
 import { useUIStore } from "../store/uiStore.js";
-import { useQuery } from "@tanstack/react-query";
-import { getHealth } from "../services/settings.service.js";
 
 const NAV_ITEMS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/applications", label: "Applications", icon: FileText },
   { to: "/tasks", label: "Task Queue", icon: ListTodo },
-  { to: "/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -48,15 +40,6 @@ export function AppSidebar() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [mobileMenuOpen, setMobileMenuOpen]);
-
-  const { data: healthData } = useQuery({
-    queryKey: ["systemHealth"],
-    queryFn: getHealth,
-    refetchInterval: 15000,
-    staleTime: 10000,
-  });
-
-  const checks = healthData?.checks || {};
 
   return (
     <>
@@ -134,35 +117,12 @@ export function AppSidebar() {
           </nav>
         </div>
 
-        {/* System Status Indicators in Sidebar */}
+        {/* Sleek bottom indicator */}
         {!sidebarCollapsed && (
-          <div className="p-4 border-2 border-[#e5e5e5] dark:border-[#2e414c] bg-[#f7f9fa] dark:bg-[#233a44] rounded-2xl m-3">
-            <div className="flex items-center justify-between text-[10px] font-black text-[#777777] dark:text-[#a5b6be] uppercase tracking-wider mb-2.5">
-              <span className="flex items-center gap-1.5">
-                <Zap size={13} className="text-[#ff9600]" /> Engines Status
-              </span>
-              <span className="flex items-center gap-1 text-[#58cc02] text-[10px] font-black">
-                <span className="w-2 h-2 rounded-full bg-[#58cc02] animate-pulse" /> LIVE
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-[11px] font-bold">
-              <div className="flex items-center gap-1.5 text-[#3c3c3c] dark:text-[#e5e5e5]">
-                <Database size={13} className={checks.mongodb === "connected" ? "text-[#58cc02]" : "text-[#ff4b4b]"} />
-                <span>MongoDB</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[#3c3c3c] dark:text-[#e5e5e5]">
-                <Server size={13} className={checks.redis === "connected" ? "text-[#58cc02]" : "text-[#ff4b4b]"} />
-                <span>Redis</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[#3c3c3c] dark:text-[#e5e5e5]">
-                <Radio size={13} className="text-[#1cb0f6]" />
-                <span>BullMQ</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[#3c3c3c] dark:text-[#e5e5e5]">
-                <Mail size={13} className="text-[#ce82ff]" />
-                <span>SMTP</span>
-              </div>
-            </div>
+          <div className="p-4 m-3 border-2 border-[#e5e5e5] dark:border-[#2e414c] bg-[#f7f9fa] dark:bg-[#233a44] rounded-2xl text-center">
+            <span className="text-[10px] font-black tracking-widest text-[#777777] dark:text-[#a5b6be] uppercase">
+              ApplyPilot v1.2 • AI Pilot
+            </span>
           </div>
         )}
       </aside>
@@ -246,34 +206,11 @@ export function AppSidebar() {
               </nav>
             </div>
 
-            {/* Mobile Footer Status */}
-            <div className="p-3.5 border-2 border-[#2e414c] bg-[#233a44] rounded-2xl">
-              <div className="flex items-center justify-between text-[10px] font-black text-[#a5b6be] uppercase tracking-wider mb-2">
-                <span className="flex items-center gap-1.5">
-                  <Zap size={12} className="text-[#ff9600]" /> Engines Status
-                </span>
-                <span className="flex items-center gap-1 text-[#58cc02] text-[10px] font-black">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#58cc02] animate-pulse" /> LIVE
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold text-[#e5e5e5]">
-                <div className="flex items-center gap-1">
-                  <Database size={11} className={checks.mongodb === "connected" ? "text-[#58cc02]" : "text-[#ff4b4b]"} />
-                  <span>MongoDB</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Server size={11} className={checks.redis === "connected" ? "text-[#58cc02]" : "text-[#ff4b4b]"} />
-                  <span>Redis</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Radio size={11} className="text-[#1cb0f6]" />
-                  <span>BullMQ</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Mail size={11} className="text-[#ce82ff]" />
-                  <span>SMTP</span>
-                </div>
-              </div>
+            {/* Mobile Footer */}
+            <div className="p-3.5 border-2 border-[#2e414c] bg-[#233a44] rounded-2xl text-center">
+              <span className="text-[10px] font-black tracking-widest text-[#a5b6be] uppercase">
+                ApplyPilot v1.2 • AI Pilot
+              </span>
             </div>
           </div>
         </div>

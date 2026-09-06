@@ -2,10 +2,16 @@ import Job from "../models/job.model.js";
 
 /**
  * GET /api/dashboard
- * Aggregates high-level metrics, status distribution, and activity feeds for the dashboard.
+ * Aggregates user-scoped metrics, status distribution, and activity feeds for the dashboard.
  */
 export async function getDashboardStats(req, res, next) {
   try {
+    const userId = req.auth?.userId;
+    const baseFilter = {};
+    if (userId && !req.auth?.isDemo) {
+      baseFilter.userId = userId;
+    }
+
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -15,6 +21,7 @@ export async function getDashboardStats(req, res, next) {
       totalApplications,
       queuedCount,
       processingCount,
+      readyForReviewCount,
       completedCount,
       failedCount,
       emailsSentCount,
@@ -22,10 +29,12 @@ export async function getDashboardStats(req, res, next) {
       thisWeekCount,
       recentApplications,
       activeJobs,
+      reviewJobs,
     ] = await Promise.all([
-      Job.countDocuments(),
-      Job.countDocuments({ status: "QUEUED" }),
+      Job.countDocuments(baseFilter),
+      Job.countDocuments({ ...baseFilter, status: "QUEUED" }),
       Job.countDocuments({
+        ...baseFilter,
         status: {
           $in: [
             "PROCESSING",
@@ -38,13 +47,18 @@ export async function getDashboardStats(req, res, next) {
           ],
         },
       }),
-      Job.countDocuments({ status: "COMPLETED" }),
-      Job.countDocuments({ status: "FAILED" }),
-      Job.countDocuments({ "email.smtpStatus": "SENT" }),
-      Job.countDocuments({ createdAt: { $gte: startOfToday } }),
-      Job.countDocuments({ createdAt: { $gte: sevenDaysAgo } }),
-      Job.find().sort({ createdAt: -1 }).limit(6).lean(),
+      Job.countDocuments({
+        ...baseFilter,
+        status: { $in: ["READY_FOR_REVIEW", "AWAITING_APPROVAL"] },
+      }),
+      Job.countDocuments({ ...baseFilter, status: "COMPLETED" }),
+      Job.countDocuments({ ...baseFilter, status: "FAILED" }),
+      Job.countDocuments({ ...baseFilter, "email.smtpStatus": "SENT" }),
+      Job.countDocuments({ ...baseFilter, createdAt: { $gte: startOfToday } }),
+      Job.countDocuments({ ...baseFilter, createdAt: { $gte: sevenDaysAgo } }),
+      Job.find(baseFilter).sort({ createdAt: -1 }).limit(6).lean(),
       Job.find({
+        ...baseFilter,
         status: {
           $in: [
             "PROCESSING",
@@ -56,6 +70,13 @@ export async function getDashboardStats(req, res, next) {
             "SAVING_TO_SENT",
           ],
         },
+      })
+        .sort({ updatedAt: -1 })
+        .limit(4)
+        .lean(),
+      Job.find({
+        ...baseFilter,
+        status: { $in: ["READY_FOR_REVIEW", "AWAITING_APPROVAL"] },
       })
         .sort({ updatedAt: -1 })
         .limit(4)
@@ -74,6 +95,7 @@ export async function getDashboardStats(req, res, next) {
 
     const statusDistribution = [
       { name: "Completed", count: completedCount, color: "#10b981" },
+      { name: "Ready for Review", count: readyForReviewCount, color: "#f59e0b" },
       { name: "In Progress", count: processingCount, color: "#8b5cf6" },
       { name: "Queued", count: queuedCount, color: "#3b82f6" },
       { name: "Failed", count: failedCount, color: "#ef4444" },
@@ -81,7 +103,7 @@ export async function getDashboardStats(req, res, next) {
 
     // Collect latest timeline events across recent jobs
     const timelineEvents = [];
-    const jobsWithTimeline = await Job.find({ "timeline.0": { $exists: true } })
+    const jobsWithTimeline = await Job.find({ ...baseFilter, "timeline.0": { $exists: true } })
       .sort({ updatedAt: -1 })
       .limit(10)
       .lean();
@@ -111,6 +133,7 @@ export async function getDashboardStats(req, res, next) {
         totalApplications,
         queued: queuedCount,
         processing: processingCount,
+        readyForReview: readyForReviewCount,
         completed: completedCount,
         failed: failedCount,
         emailsSent: emailsSentCount,
@@ -120,6 +143,7 @@ export async function getDashboardStats(req, res, next) {
         failureRate,
         recentApplications,
         activeJobs,
+        reviewJobs,
         statusDistribution,
         recentTimeline: timelineEvents.slice(0, 8),
       },

@@ -41,7 +41,16 @@ export function formatRelativeTime(dateString) {
 
 export function formatSalary(min, max, currency = "USD") {
   if (!min && !max) return null;
-  const sym = currency === "USD" ? "$" : currency === "EUR" ? "€" : currency === "GBP" ? "£" : currency === "INR" ? "₹" : `${currency} `;
+  const sym =
+    currency === "USD"
+      ? "$"
+      : currency === "EUR"
+      ? "€"
+      : currency === "GBP"
+      ? "£"
+      : currency === "INR"
+      ? "₹"
+      : `${currency} `;
 
   const fmtNum = (n) => {
     if (n >= 1000) return `${Math.round(n / 1000)}k`;
@@ -59,12 +68,12 @@ export function formatSalary(min, max, currency = "USD") {
 export const STAGE_CONFIGS = [
   { id: "QUEUED", label: "Queued", progress: 5, description: "Waiting in background queue" },
   { id: "PARSING_JOB", label: "Parsing JD", progress: 15, description: "Extracting structured job information" },
-  { id: "TAILORING_RESUME", label: "Tailoring Resume", progress: 35, description: "Generating ATS-optimized PDF resume" },
+  { id: "TAILORING_RESUME", label: "Tailoring Resume", progress: 35, description: "Generating ATS-optimized resume" },
   { id: "GENERATING_COVER_LETTER", label: "Cover Letter", progress: 55, description: "Drafting tailored executive letter" },
-  { id: "COMPOSING_EMAIL", label: "Composing Email", progress: 70, description: "Compiling RFC 5322 MIME message" },
+  { id: "READY_FOR_REVIEW", label: "Review & Approve", progress: 70, description: "Review and approve tailored application before sending" },
   { id: "SENDING_EMAIL", label: "Sending SMTP", progress: 85, description: "Delivering to recruiter email" },
   { id: "SAVING_TO_SENT", label: "Saving to Sent", progress: 95, description: "Appending exact MIME to Sent folder" },
-  { id: "COMPLETED", label: "Completed", progress: 100, description: "All automation stages finished successfully" },
+  { id: "COMPLETED", label: "Completed", progress: 100, description: "Application finished and email delivered" },
 ];
 
 export function getStatusMeta(status) {
@@ -76,6 +85,15 @@ export function getStatusMeta(status) {
         bgColor: "bg-[#d7ffb8] dark:bg-[#1a3818] text-[#58a700] dark:text-[#a5ed6e] border-[#58cc02]",
         dotColor: "bg-[#58cc02]",
         buttonClass: "duo-btn-primary",
+      };
+    case "READY_FOR_REVIEW":
+    case "AWAITING_APPROVAL":
+      return {
+        label: "Ready for Review",
+        variant: "orange",
+        bgColor: "bg-[#fff2d6] dark:bg-[#382512] text-[#e58600] dark:text-[#ffaa33] border-[#ff9600]",
+        dotColor: "bg-[#ff9600]",
+        buttonClass: "duo-btn-orange",
       };
     case "FAILED":
       return {

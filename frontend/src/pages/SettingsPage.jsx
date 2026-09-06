@@ -54,13 +54,10 @@ export function SettingsPage() {
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-200 select-none">
       {/* Header */}
       <div>
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#d7ffb8] dark:bg-[#1a3818] border-2 border-[#58cc02] text-[#58a700] dark:text-[#a5ed6e] text-xs font-black uppercase mb-1">
-          <ShieldCheck size={14} className="stroke-[2.5]" /> Infrastructure & Provider Diagnostics
-        </div>
         <h2 className="text-xl sm:text-2xl font-black text-[#3c3c3c] dark:text-white tracking-tight uppercase">
-          System Settings & Status
+          Settings & Diagnostics
         </h2>
-        <p className="text-xs text-[#777777] dark:text-[#a5b6be] font-bold">
+        <p className="text-xs text-[#777777] dark:text-[#a5b6be] font-bold mt-0.5">
           Inspect connection health, service integrations, and runtime configuration
         </p>
       </div>

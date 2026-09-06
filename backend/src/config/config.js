@@ -14,6 +14,12 @@ const config = {
     env: process.env.NODE_ENV || "development",
   },
 
+  // Clerk Authentication Configuration
+  clerk: {
+    secretKey: process.env.CLERK_SECRET_KEY || "",
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY || "",
+  },
+
   // MongoDB connection settings
   mongodb: {
     uri:

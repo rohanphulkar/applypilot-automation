@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import confetti from "canvas-confetti";
 import {
   ArrowLeft,
   Building,
@@ -18,11 +19,15 @@ import {
   Code2,
   ChevronDown,
   ChevronUp,
+  CheckCheck,
+  Send,
 } from "lucide-react";
 import {
   getApplicationById,
   retryApplication,
   deleteApplication,
+  updateApplication,
+  sendApplicationEmail,
 } from "../services/applications.service.js";
 import { StatusBadge } from "../components/common/StatusBadge.jsx";
 import { ProgressStepper } from "../components/common/ProgressStepper.jsx";
@@ -39,7 +44,7 @@ const TABS = [
   { id: "job_details", label: "Job Details", icon: Briefcase },
   { id: "resume", label: "Resume", icon: FileText },
   { id: "cover_letter", label: "Cover Letter", icon: FileText },
-  { id: "email", label: "Email", icon: Mail },
+  { id: "email", label: "Email & Send", icon: Mail },
   { id: "timeline", label: "Timeline", icon: Clock },
   { id: "raw_json", label: "Raw JSON", icon: Code2 },
 ];
@@ -51,13 +56,16 @@ export function ApplicationDetailsPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [showOriginalDesc, setShowOriginalDesc] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showSendConfirm, setShowSendConfirm] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["application", id],
     queryFn: () => getApplicationById(id),
     refetchInterval: (query) => {
       const status = query.state.data?.data?.status;
-      if (status === "COMPLETED" || status === "FAILED") return false;
+      if (status === "COMPLETED" || status === "FAILED" || status === "READY_FOR_REVIEW") {
+        return false;
+      }
       return 2500;
     },
   });
@@ -65,6 +73,36 @@ export function ApplicationDetailsPage() {
   const retryMutation = useMutation({
     mutationFn: () => retryApplication(id),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["application", id] });
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
+      queryClient.invalidateQueries({ queryKey: ["taskQueue"] });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (updateData) => updateApplication(id, updateData),
+    onSuccess: (res) => {
+      const updatedJob = res?.data?.data || res?.data;
+      if (updatedJob) {
+        queryClient.setQueryData(["application", id], { data: updatedJob });
+      }
+      queryClient.invalidateQueries({ queryKey: ["application", id] });
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
+    },
+  });
+
+  const sendMutation = useMutation({
+    mutationFn: (overrides = {}) => sendApplicationEmail(id, overrides),
+    onSuccess: () => {
+      setShowSendConfirm(false);
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ["#58cc02", "#1cb0f6", "#ff9600", "#ce82ff"],
+      });
       queryClient.invalidateQueries({ queryKey: ["application", id] });
       queryClient.invalidateQueries({ queryKey: ["applications"] });
       queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
@@ -117,12 +155,21 @@ export function ApplicationDetailsPage() {
 
   const app = data.data;
   const parsed = app.parsedJob || {};
-  const progress = app.processing?.progress ?? (app.status === "COMPLETED" ? 100 : 5);
+  const isAwaitingApproval = app.status === "READY_FOR_REVIEW" || app.status === "AWAITING_APPROVAL";
+  const progress = app.processing?.progress ?? (app.status === "COMPLETED" ? 100 : isAwaitingApproval ? 70 : 5);
   const isFailed = app.status === "FAILED";
 
   const skillsList = parsed.skills
     ? parsed.skills.split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean)
     : [];
+
+  const handleSaveCoverLetter = (newContent) => {
+    updateMutation.mutate({ coverLetter: newContent });
+  };
+
+  const handleUpdateEmailHeaders = (headers) => {
+    updateMutation.mutate({ email: headers });
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200 select-none">
@@ -136,6 +183,27 @@ export function ApplicationDetailsPage() {
         </Link>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {isAwaitingApproval && (
+            <button
+              type="button"
+              onClick={() => setShowSendConfirm(true)}
+              disabled={sendMutation.isPending}
+              className="duo-btn-primary px-4 py-2 text-xs font-black flex items-center gap-1.5 cursor-pointer"
+            >
+              {sendMutation.isPending ? (
+                <>
+                  <RotateCw size={14} className="animate-spin" />
+                  <span>DISPATCHING...</span>
+                </>
+              ) : (
+                <>
+                  <Send size={14} className="stroke-[3]" />
+                  <span>APPROVE & SEND EMAIL</span>
+                </>
+              )}
+            </button>
+          )}
+
           {isFailed && (
             <button
               type="button"
@@ -158,6 +226,44 @@ export function ApplicationDetailsPage() {
           </button>
         </div>
       </div>
+
+      {/* Actionable Banner: Awaiting User Approval */}
+      {isAwaitingApproval && (
+        <div className="p-4 sm:p-6 rounded-2xl bg-[#fff2d6] dark:bg-[#382512] border-2 border-[#ff9600] border-b-4 border-b-[#e58600] flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-[#ff9600] text-white flex items-center justify-center shrink-0 shadow-xs">
+              <CheckCheck size={20} className="stroke-[3]" />
+            </div>
+            <div>
+              <span className="text-sm font-black text-[#e58600] dark:text-[#ffaa33] uppercase tracking-wide block">
+                Application Ready for Your Review & Approval
+              </span>
+              <p className="text-xs font-bold text-[#777777] dark:text-[#e5e5e5] mt-1 leading-relaxed">
+                Your ATS-optimized resume has been generated and the cover letter drafted. Inspect or edit them below, and click Approve when ready to dispatch the email.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab("cover_letter")}
+              className="duo-btn-secondary px-3.5 py-2 text-xs font-black"
+            >
+              Edit Cover Letter
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSendConfirm(true)}
+              disabled={sendMutation.isPending}
+              className="duo-btn-primary px-5 py-2 text-xs font-black flex items-center gap-2 cursor-pointer shadow-md"
+            >
+              <Send size={14} className="stroke-[3]" />
+              <span>APPROVE & SEND</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Hero Card with Stepper */}
       <div className="duo-card p-4 sm:p-6 md:p-8 space-y-6">
@@ -201,7 +307,7 @@ export function ApplicationDetailsPage() {
           </div>
         </div>
 
-        {/* Error Alert (If Failed) with Actionable Retry Button */}
+        {/* Error Alert (If Failed) */}
         {isFailed && (
           <div className="p-4 rounded-2xl bg-[#ffe5e5] dark:bg-[#38181a] border-2 border-[#ff4b4b] text-[#ea2b2b] dark:text-[#ff7a7a] text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-start gap-3">
@@ -265,7 +371,6 @@ export function ApplicationDetailsPage() {
       {/* TAB 1: OVERVIEW */}
       {activeTab === "overview" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Key Summary Cards */}
           <div className="lg:col-span-2 space-y-6">
             <div className="duo-card p-6 space-y-4">
               <h3 className="text-sm font-black text-[#3c3c3c] dark:text-white uppercase tracking-wider">
@@ -278,13 +383,13 @@ export function ApplicationDetailsPage() {
                     Recruiter Contact
                   </span>
                   <span className="font-black text-[#3c3c3c] dark:text-white font-mono">
-                    {parsed.applicationEmail || app.email?.recruiterEmail || "None found in posting"}
+                    {app.email?.recruiterEmail || parsed.applicationEmail || "None found in posting"}
                   </span>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-[#f7f9fa] dark:bg-[#233a44] border-2 border-[#e5e5e5] dark:border-[#2e414c]">
                   <span className="text-[10px] font-black text-[#777777] dark:text-[#a5b6be] uppercase tracking-wider block mb-1">
-                    Resume Tailoring
+                    Resume Status
                   </span>
                   <span className="font-black text-[#3c3c3c] dark:text-white">
                     {app.resume?.requestStatus || "PENDING"} ({app.resume?.urls?.length || 0} files)
@@ -293,16 +398,16 @@ export function ApplicationDetailsPage() {
 
                 <div className="p-4 rounded-2xl bg-[#f7f9fa] dark:bg-[#233a44] border-2 border-[#e5e5e5] dark:border-[#2e414c]">
                   <span className="text-[10px] font-black text-[#777777] dark:text-[#a5b6be] uppercase tracking-wider block mb-1">
-                    SMTP Email Status
+                    Delivery State
                   </span>
                   <span className="font-black text-[#3c3c3c] dark:text-white">
-                    {app.email?.smtpStatus || "PENDING"}
+                    {isAwaitingApproval ? "READY FOR APPROVAL" : app.email?.smtpStatus || "PENDING"}
                   </span>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-[#f7f9fa] dark:bg-[#233a44] border-2 border-[#e5e5e5] dark:border-[#2e414c]">
                   <span className="text-[10px] font-black text-[#777777] dark:text-[#a5b6be] uppercase tracking-wider block mb-1">
-                    IMAP Sent Folder Sync
+                    IMAP Sent Sync
                   </span>
                   <span className="font-black text-[#3c3c3c] dark:text-white">
                     {app.email?.sentFolderStatus || "PENDING"}
@@ -420,9 +525,11 @@ export function ApplicationDetailsPage() {
                 </span>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono font-black text-[#3c3c3c] dark:text-white">
-                    {parsed.applicationEmail || "None found in posting"}
+                    {app.email?.recruiterEmail || parsed.applicationEmail || "None found in posting"}
                   </span>
-                  {parsed.applicationEmail && <CopyButton text={parsed.applicationEmail} />}
+                  {(app.email?.recruiterEmail || parsed.applicationEmail) && (
+                    <CopyButton text={app.email?.recruiterEmail || parsed.applicationEmail} />
+                  )}
                 </div>
               </div>
 
@@ -492,6 +599,8 @@ export function ApplicationDetailsPage() {
         <CoverLetterViewer
           content={app.coverLetter?.content}
           status={app.coverLetter?.status || "PENDING"}
+          onSave={handleSaveCoverLetter}
+          isSaving={updateMutation.isPending}
         />
       )}
 
@@ -500,7 +609,11 @@ export function ApplicationDetailsPage() {
         <EmailPreviewCard
           email={app.email || {}}
           resumeUrls={app.resume?.urls || []}
+          status={app.status}
           onRetry={() => retryMutation.mutate()}
+          onSend={() => setShowSendConfirm(true)}
+          onUpdateEmail={handleUpdateEmailHeaders}
+          isSending={sendMutation.isPending}
           isRetrying={retryMutation.isPending}
         />
       )}
@@ -531,6 +644,17 @@ export function ApplicationDetailsPage() {
           </pre>
         </div>
       )}
+
+      {/* Send Approval Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showSendConfirm}
+        title="Approve & Send Application Email?"
+        message={`This will compile the tailored resume PDF attachment, generate the RFC 5322 MIME email message, deliver it via SMTP to "${app.email?.recruiterEmail || 'recruiter'}", and synchronize with your IMAP Sent folder.`}
+        confirmText={sendMutation.isPending ? "Sending..." : "Approve & Send Now"}
+        variant="primary"
+        onConfirm={() => sendMutation.mutate()}
+        onCancel={() => setShowSendConfirm(false)}
+      />
 
       {/* Delete Confirmation Modal */}
       <ConfirmDialog

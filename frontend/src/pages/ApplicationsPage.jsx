@@ -22,6 +22,7 @@ import { LoadingSkeleton } from "../components/common/LoadingSkeleton.jsx";
 
 const STATUS_FILTERS = [
   { id: "ALL", label: "All" },
+  { id: "READY_FOR_REVIEW", label: "Awaiting Review" },
   { id: "PROCESSING", label: "Processing" },
   { id: "QUEUED", label: "Queued" },
   { id: "COMPLETED", label: "Completed" },
@@ -88,7 +89,7 @@ export function ApplicationsPage() {
             Job Applications
           </h2>
           <p className="text-xs text-[#777777] dark:text-[#a5b6be] font-bold mt-0.5">
-            Manage and monitor all automated job applications ({pagination.total} total)
+            Manage, review, and control all automated job applications ({pagination.total} total)
           </p>
         </div>
 

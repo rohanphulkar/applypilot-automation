@@ -8,6 +8,7 @@ import {
   Send,
   FileText,
   Save,
+  CheckCheck,
 } from "lucide-react";
 import { getStatusMeta } from "../../utils/formatters.js";
 
@@ -19,6 +20,9 @@ export function StatusBadge({ status, className = "", size = "md" }) {
     switch (status) {
       case "COMPLETED":
         return <CheckCircle2 size={iconSize} className="text-[#58cc02] stroke-[3]" />;
+      case "READY_FOR_REVIEW":
+      case "AWAITING_APPROVAL":
+        return <CheckCheck size={iconSize} className="text-[#ff9600] stroke-[3]" />;
       case "FAILED":
         return <AlertCircle size={iconSize} className="text-[#ff4b4b] stroke-[3]" />;
       case "QUEUED":

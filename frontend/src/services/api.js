@@ -1,8 +1,6 @@
 import axios from "axios";
 
 // Base API URL:
-// In development, default to http://localhost:5000.
-// In production behind Nginx proxy, default to "" (relative path).
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL !== undefined
     ? import.meta.env.VITE_API_BASE_URL
@@ -18,6 +16,31 @@ export const api = axios.create({
   timeout: 30000,
 });
 
+let clerkTokenGetter = null;
+
+/**
+ * Configure the global auth token getter function from Clerk
+ */
+export const setAuthTokenGetter = (fn) => {
+  clerkTokenGetter = fn;
+};
+
+// Request interceptor to attach Clerk bearer token
+api.interceptors.request.use(async (config) => {
+  if (clerkTokenGetter) {
+    try {
+      const token = await clerkTokenGetter();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (e) {
+      console.warn("Failed to retrieve Clerk JWT token:", e.message);
+    }
+  }
+  return config;
+});
+
+// Response interceptor
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {

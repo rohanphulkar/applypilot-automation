@@ -48,8 +48,190 @@ async function updateJobProgress(job, stage, progress, status, message) {
 }
 
 /**
+ * Executes manual email sending pipeline upon user approval.
+ *
+ * @param {string} applicationId
+ * @param {string} [userId]
+ * @param {object} [customOverrides] - Optional custom edited fields (subject, body, recruiterEmail)
+ */
+export async function sendApplicationEmailPipeline(applicationId, userId = null, customOverrides = {}) {
+  const isObjectId = typeof applicationId === "string" && /^[0-9a-fA-F]{24}$/.test(applicationId);
+  const query = {
+    $or: [
+      { jobId: applicationId },
+      ...(isObjectId ? [{ _id: applicationId }] : []),
+    ],
+  };
+  if (userId) {
+    query.$or = [
+      { jobId: applicationId, userId },
+      { jobId: applicationId, userId: "user_demo_applypilot" },
+      ...(isObjectId
+        ? [{ _id: applicationId, userId }, { _id: applicationId, userId: "user_demo_applypilot" }]
+        : []),
+    ];
+  }
+
+  const job = await Job.findOne(query);
+  if (!job) {
+    throw new Error(`Job application with ID '${applicationId}' not found.`);
+  }
+
+  // Allow custom overrides from user edit before sending
+  if (customOverrides.subject) job.email.subject = customOverrides.subject.trim();
+  if (customOverrides.body) {
+    job.email.body = customOverrides.body;
+    job.coverLetter.content = customOverrides.body;
+  }
+  if (customOverrides.recruiterEmail) {
+    job.email.recruiterEmail = customOverrides.recruiterEmail.trim().toLowerCase();
+  }
+
+  if (!job.email.recruiterEmail) {
+    throw new Error("Cannot send email: No recipient email address provided.");
+  }
+
+  let resumeFilePath = null;
+
+  try {
+    // 1. Update progress to SENDING_EMAIL (85%)
+    await updateJobProgress(
+      job,
+      "SENDING_EMAIL",
+      85,
+      "STARTED",
+      `Dispatching approved application email to ${job.email.recruiterEmail}`
+    );
+
+    // Download primary resume PDF for email attachment if available
+    const primaryResumeUrl = job.resume?.urls?.[0];
+    if (primaryResumeUrl) {
+      resumeFilePath = await downloadResumeFile(
+        primaryResumeUrl,
+        applicationId,
+        job.resume?.filename ? `${job.resume.filename}.pdf` : null
+      );
+    }
+
+    if (!job.email.messageId) {
+      job.email.messageId = generateMessageId(applicationId);
+    }
+
+    // Convert plain text body into clean HTML email body
+    const textBody = job.email.body || job.coverLetter?.content || "";
+    const htmlBody = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #222;">
+        ${textBody
+          .split("\n\n")
+          .map((para) => `<p style="margin-bottom: 16px;">${para.replace(/\n/g, "<br/>")}</p>`)
+          .join("")}
+      </div>
+    `.trim();
+
+    // Format sender with display name
+    const senderFrom = config.email.name
+      ? `"${config.email.name}" <${config.email.address}>`
+      : config.email.address;
+
+    // Build the complete RFC 5322 MIME message
+    const rawMimeBuffer = await buildRawMimeMessage({
+      from: senderFrom,
+      to: job.email.recruiterEmail,
+      subject: job.email.subject || "Job Application",
+      text: textBody,
+      html: htmlBody,
+      messageId: job.email.messageId,
+      resumeFilePath,
+    });
+
+    // Send via SMTP
+    await sendMimeViaSmtp(
+      rawMimeBuffer,
+      {
+        from: config.email.address,
+        to: job.email.recruiterEmail,
+      },
+      applicationId
+    );
+
+    job.email.smtpStatus = "SENT";
+    job.email.sentAt = new Date();
+    job.timeline.push({
+      stage: "SENDING_EMAIL",
+      status: "COMPLETED",
+      message: `Email successfully delivered via SMTP to ${job.email.recruiterEmail}`,
+      createdAt: new Date(),
+    });
+    await job.save();
+
+    // Append to IMAP Sent folder
+    await updateJobProgress(
+      job,
+      "SAVING_TO_SENT",
+      95,
+      "STARTED",
+      "Synchronizing email into IMAP Sent folder"
+    );
+
+    const imapResult = await appendMimeToSentFolder(rawMimeBuffer, applicationId);
+
+    if (imapResult?.skipped) {
+      job.email.sentFolderStatus = "SKIPPED";
+      job.timeline.push({
+        stage: "SAVING_TO_SENT",
+        status: "SKIPPED",
+        message: "IMAP Sent-folder synchronization is disabled in settings",
+        createdAt: new Date(),
+      });
+    } else {
+      job.email.sentFolderStatus = "SAVED";
+      job.timeline.push({
+        stage: "SAVING_TO_SENT",
+        status: "COMPLETED",
+        message: "Exact MIME message appended to Sent folder via IMAP",
+        createdAt: new Date(),
+      });
+    }
+    await job.save();
+
+    // Cleanup & Mark COMPLETED (100%)
+    await cleanupTemporaryFiles(applicationId);
+
+    job.status = "COMPLETED";
+    job.processing.currentStage = "COMPLETED";
+    job.processing.progress = 100;
+    job.processing.completedAt = new Date();
+    job.error = { stage: null, message: null };
+    job.timeline.push({
+      stage: "COMPLETED",
+      status: "COMPLETED",
+      message: "Application pipeline finished successfully and email delivered!",
+      createdAt: new Date(),
+    });
+    await job.save();
+
+    return job;
+  } catch (error) {
+    await cleanupTemporaryFiles(applicationId);
+    job.status = "FAILED";
+    job.error = {
+      stage: "SENDING_EMAIL",
+      message: error.message,
+    };
+    job.timeline.push({
+      stage: "SENDING_EMAIL",
+      status: "FAILED",
+      message: `Failed to send email: ${error.message}`,
+      createdAt: new Date(),
+    });
+    await job.save();
+    throw error;
+  }
+}
+
+/**
  * Core application processor function.
- * Orchestrates all stages idempotently.
+ * Orchestrates parsing, resume tailoring, and cover letter generation, then pauses for manual user review.
  *
  * @param {import('bullmq').Job} bullmqJob
  */
@@ -69,13 +251,11 @@ export async function processApplicationJob(bullmqJob) {
     return;
   }
 
-  // If already completed, nothing to do
-  if (job.status === "COMPLETED") {
-    logger.info("Job already completed. Skipping.", { applicationId });
+  // If already completed or ready for review, nothing to do
+  if (job.status === "COMPLETED" || job.status === "READY_FOR_REVIEW") {
+    logger.info("Job already completed or awaiting review. Skipping.", { applicationId });
     return;
   }
-
-  let resumeFilePath = null;
 
   try {
     // 2. Set overall status to PROCESSING
@@ -114,31 +294,6 @@ export async function processApplicationJob(bullmqJob) {
       await job.save();
     }
 
-    // Check recruiter email requirement
-    if (!job.parsedJob.applicationEmail) {
-      const errorMsg = "No application email was found in the job description.";
-      logger.warn(errorMsg, {
-        applicationId,
-        stage: "PARSING_JOB",
-      });
-
-      job.status = "FAILED";
-      job.processing.currentStage = "PARSING_JOB";
-      job.error = {
-        stage: "PARSING_JOB",
-        message: errorMsg,
-      };
-      job.timeline.push({
-        stage: "PARSING_JOB",
-        status: "FAILED",
-        message: errorMsg,
-        createdAt: new Date(),
-      });
-      await job.save();
-      // Do not throw so BullMQ doesn't retry missing email
-      return;
-    }
-
     // 4. Stage 2: Resume Tailoring via Resume API (35%)
     if (job.resume.requestStatus !== "COMPLETED") {
       await updateJobProgress(
@@ -146,7 +301,7 @@ export async function processApplicationJob(bullmqJob) {
         "TAILORING_RESUME",
         35,
         "STARTED",
-        "Requesting ATS-tailored resume generation from Resume API"
+        "Requesting ATS-tailored resume generation adhering to ATS guidelines"
       );
 
       const resumeResult = await tailorResume(
@@ -182,6 +337,7 @@ export async function processApplicationJob(bullmqJob) {
         {
           parsedJob: job.parsedJob,
           originalJobDescription: job.originalJobDescription,
+          applicantName: config.email.name || "Rohan Phulkar",
         },
         applicationId
       );
@@ -197,164 +353,34 @@ export async function processApplicationJob(bullmqJob) {
       await job.save();
     }
 
-    // 6. Stage 4: Email Composition & Stable Message-ID (70%)
-    job.email.recruiterEmail = job.parsedJob.applicationEmail;
-    job.email.subject = `Application for ${job.parsedJob.title || "Position"}${
-      job.parsedJob.company ? " - " + job.parsedJob.company : ""
+    // 6. Stage 4: Email Draft Composition & Stable Message-ID (70%)
+    job.email.recruiterEmail = job.parsedJob?.applicationEmail || "";
+    job.email.subject = `Application for ${job.parsedJob?.title || "Position"}${
+      job.parsedJob?.company ? " - " + job.parsedJob.company : ""
     }`;
     job.email.body = job.coverLetter.content;
 
     if (!job.email.messageId) {
       job.email.messageId = generateMessageId(applicationId);
     }
-    await updateJobProgress(
-      job,
-      "COMPOSING_EMAIL",
-      70,
-      "STARTED",
-      `Composing application email to ${job.email.recruiterEmail}`
-    );
 
-    // Download primary resume PDF for email attachment if available
-    const primaryResumeUrl = job.resume.urls?.[0];
-    if (primaryResumeUrl) {
-      resumeFilePath = await downloadResumeFile(
-        primaryResumeUrl,
-        applicationId,
-        job.resume.filename ? `${job.resume.filename}.pdf` : null
-      );
-    }
-
-    // Convert plain text cover letter into clean HTML email body
-    const htmlBody = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #222;">
-        ${job.coverLetter.content
-          .split("\n\n")
-          .map((para) => `<p style="margin-bottom: 16px;">${para.replace(/\n/g, "<br/>")}</p>`)
-          .join("")}
-      </div>
-    `.trim();
-
-    // Format sender with display name (e.g. "Rohan Phulkar" <hello@rohanphulkar.com>)
-    const senderFrom = config.email.name
-      ? `"${config.email.name}" <${config.email.address}>`
-      : config.email.address;
-
-    // Build the complete RFC 5322 MIME message
-    const rawMimeBuffer = await buildRawMimeMessage({
-      from: senderFrom,
-      to: job.email.recruiterEmail,
-      subject: job.email.subject,
-      text: job.email.body,
-      html: htmlBody,
-      messageId: job.email.messageId,
-      resumeFilePath,
-    });
-
+    // 7. Transition to READY_FOR_REVIEW for manual user review & approval!
+    job.status = "READY_FOR_REVIEW";
+    job.processing.currentStage = "READY_FOR_REVIEW";
+    job.processing.progress = 70;
     job.timeline.push({
-      stage: "COMPOSING_EMAIL",
-      status: "COMPLETED",
-      message: `Compiled RFC 5322 MIME email message (ID: ${job.email.messageId})`,
+      stage: "READY_FOR_REVIEW",
+      status: "READY_FOR_REVIEW",
+      message: "Resume tailored and cover letter drafted. Awaiting user review, tailoring edits, and manual approval to send.",
       createdAt: new Date(),
     });
     await job.save();
 
-    // 7. Stage 5: Send MIME via SMTP (85%) (Idempotent: skip if already SENT)
-    if (job.email.smtpStatus !== "SENT") {
-      await updateJobProgress(
-        job,
-        "SENDING_EMAIL",
-        85,
-        "STARTED",
-        `Dispatching email via SMTP (${config.email.smtp.host}) to ${job.email.recruiterEmail}`
-      );
-
-      await sendMimeViaSmtp(
-        rawMimeBuffer,
-        {
-          from: config.email.address,
-          to: job.email.recruiterEmail,
-        },
-        applicationId
-      );
-
-      job.email.smtpStatus = "SENT";
-      job.email.sentAt = new Date();
-      job.timeline.push({
-        stage: "SENDING_EMAIL",
-        status: "COMPLETED",
-        message: `Email successfully delivered via SMTP to ${job.email.recruiterEmail}`,
-        createdAt: new Date(),
-      });
-      await job.save();
-    } else {
-      logger.info(
-        "SMTP email was already sent in previous attempt; skipping resend.",
-        { applicationId }
-      );
-    }
-
-    // 8. Stage 6: Append Exact MIME to IMAP Sent folder (95%) (Idempotent: skip if already SAVED)
-    if (job.email.sentFolderStatus !== "SAVED" && job.email.sentFolderStatus !== "SKIPPED") {
-      await updateJobProgress(
-        job,
-        "SAVING_TO_SENT",
-        95,
-        "STARTED",
-        "Synchronizing email into IMAP Sent folder"
-      );
-
-      const imapResult = await appendMimeToSentFolder(rawMimeBuffer, applicationId);
-
-      if (imapResult?.skipped) {
-        job.email.sentFolderStatus = "SKIPPED";
-        job.timeline.push({
-          stage: "SAVING_TO_SENT",
-          status: "SKIPPED",
-          message: "IMAP Sent-folder synchronization is disabled in settings",
-          createdAt: new Date(),
-        });
-      } else {
-        job.email.sentFolderStatus = "SAVED";
-        job.timeline.push({
-          stage: "SAVING_TO_SENT",
-          status: "COMPLETED",
-          message: "Exact MIME message appended to Sent folder via IMAP",
-          createdAt: new Date(),
-        });
-      }
-      await job.save();
-    } else {
-      logger.info(
-        "Email was already appended to Sent folder in previous attempt; skipping.",
-        { applicationId }
-      );
-    }
-
-    // 9. Stage 7: Cleanup & Mark Completed (100%)
-    await cleanupTemporaryFiles(applicationId);
-
-    job.status = "COMPLETED";
-    job.processing.currentStage = "COMPLETED";
-    job.processing.progress = 100;
-    job.processing.completedAt = new Date();
-    job.error = { stage: null, message: null };
-    job.timeline.push({
-      stage: "COMPLETED",
-      status: "COMPLETED",
-      message: "Application pipeline finished successfully!",
-      createdAt: new Date(),
-    });
-    await job.save();
-
-    logger.info("Job application pipeline finished successfully!", {
+    logger.info("Job application reached READY_FOR_REVIEW state", {
       applicationId,
-      status: "COMPLETED",
+      status: "READY_FOR_REVIEW",
     });
   } catch (error) {
-    // Clean up temporary files on error
-    await cleanupTemporaryFiles(applicationId);
-
     const stage = error.stage || job.status || "PROCESSING";
     const errorMessage = error.message || "An unexpected error occurred.";
 
@@ -378,7 +404,6 @@ export async function processApplicationJob(bullmqJob) {
     });
     await job.save();
 
-    // Re-throw so BullMQ triggers retry / backoff
     throw error;
   }
 }
@@ -420,4 +445,5 @@ export function startJobWorker() {
 export default {
   startJobWorker,
   processApplicationJob,
+  sendApplicationEmailPipeline,
 };

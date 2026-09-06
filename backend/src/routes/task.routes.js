@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { getQueueTasks, getTaskById } from "../controllers/task.controller.js";
+import { requireAuth } from "../middlewares/auth.middleware.js";
 
 const router = Router();
+
+router.use(requireAuth);
 
 // GET /api/tasks -> BullMQ queue categorized monitor
 router.get("/", getQueueTasks);

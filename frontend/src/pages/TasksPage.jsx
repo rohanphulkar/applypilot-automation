@@ -61,13 +61,10 @@ export function TasksPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ddf4ff] dark:bg-[#162a35] border-2 border-[#1cb0f6] text-[#1899d6] dark:text-[#1cb0f6] text-xs font-black uppercase mb-1">
-            <Radio size={14} className="animate-pulse stroke-[2.5]" /> BullMQ & Redis Engine
-          </div>
-          <h2 className="text-2xl font-black text-[#3c3c3c] dark:text-white tracking-tight uppercase">
-            Background Task Queue
+          <h2 className="text-xl sm:text-2xl font-black text-[#3c3c3c] dark:text-white tracking-tight uppercase">
+            Task Queue
           </h2>
-          <p className="text-xs text-[#777777] dark:text-[#a5b6be] font-bold">
+          <p className="text-xs text-[#777777] dark:text-[#a5b6be] font-bold mt-0.5">
             Monitor real-time task executions, worker concurrency, and retry states
           </p>
         </div>

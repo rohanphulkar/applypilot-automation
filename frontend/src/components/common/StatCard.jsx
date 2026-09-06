@@ -5,7 +5,7 @@ export function StatCard({
   value,
   subtitle,
   icon: Icon,
-  variant = "green", // "green", "cyan", "orange", "rose", "purple"
+  variant = "green", // "green", "cyan", "orange", "amber", "rose", "purple"
   onClick,
 }) {
   const getVariantStyles = () => {
@@ -21,6 +21,7 @@ export function StatCard({
           iconBg: "bg-[#ddf4ff] dark:bg-[#162a35] text-[#1899d6] dark:text-[#1cb0f6] border-2 border-[#1cb0f6]",
           hoverBorder: "hover:border-[#1cb0f6]",
         };
+      case "amber":
       case "orange":
         return {
           iconBg: "bg-[#ffe8cc] dark:bg-[#382512] text-[#e58600] dark:text-[#ff9600] border-2 border-[#ff9600]",

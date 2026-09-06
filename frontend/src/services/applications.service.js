@@ -3,8 +3,13 @@ import api from "./api.js";
 /**
  * Service to manage job applications
  */
-export async function createApplication(jobDescription) {
-  return api.post("/api/jobs", { job_description: jobDescription });
+export async function createApplication(payload) {
+  const body = typeof payload === "string" ? { job_description: payload } : payload;
+  return api.post("/api/jobs", body);
+}
+
+export async function parseJobImage(imageBase64, mimeType = "image/png") {
+  return api.post("/api/jobs/parse-image", { image: imageBase64, mimeType });
 }
 
 export async function getApplications(params = {}) {
@@ -13,6 +18,14 @@ export async function getApplications(params = {}) {
 
 export async function getApplicationById(id) {
   return api.get(`/api/jobs/${id}`);
+}
+
+export async function updateApplication(id, data) {
+  return api.patch(`/api/jobs/${id}`, data);
+}
+
+export async function sendApplicationEmail(id, overrides = {}) {
+  return api.post(`/api/jobs/${id}/send`, overrides);
 }
 
 export async function retryApplication(id) {
@@ -25,8 +38,11 @@ export async function deleteApplication(id) {
 
 export default {
   createApplication,
+  parseJobImage,
   getApplications,
   getApplicationById,
+  updateApplication,
+  sendApplicationEmail,
   retryApplication,
   deleteApplication,
 };

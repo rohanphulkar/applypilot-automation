@@ -1,25 +1,61 @@
 import React, { useState } from "react";
-import { Mail, CheckCircle2, AlertCircle, Clock, FileText, RotateCw } from "lucide-react";
+import {
+  Mail,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  FileText,
+  RotateCw,
+  Send,
+  Edit3,
+  Save,
+  CheckCheck,
+} from "lucide-react";
 import { formatDate } from "../../utils/formatters.js";
 import { CopyButton } from "../common/CopyButton.jsx";
 
 export function EmailPreviewCard({
   email = {},
   resumeUrls = [],
+  status = "QUEUED",
   onRetry,
+  onSend,
+  onUpdateEmail,
+  isSending = false,
   isRetrying = false,
 }) {
   const [viewMode, setViewMode] = useState("rendered"); // "rendered" | "plain"
+  const [isEditingHeaders, setIsEditingHeaders] = useState(false);
 
   const {
-    recruiterEmail,
-    subject,
-    body,
+    recruiterEmail = "",
+    subject = "",
+    body = "",
     messageId,
     smtpStatus = "PENDING",
     sentFolderStatus = "PENDING",
     sentAt,
   } = email;
+
+  const [editedTo, setEditedTo] = useState(recruiterEmail || "");
+  const [editedSubject, setEditedSubject] = useState(subject || "");
+
+  React.useEffect(() => {
+    setEditedTo(recruiterEmail || "");
+    setEditedSubject(subject || "");
+  }, [recruiterEmail, subject]);
+
+  const isAwaitingApproval = status === "READY_FOR_REVIEW" || status === "AWAITING_APPROVAL";
+
+  const handleSaveHeaders = () => {
+    if (onUpdateEmail) {
+      onUpdateEmail({
+        recruiterEmail: editedTo,
+        subject: editedSubject,
+      });
+    }
+    setIsEditingHeaders(false);
+  };
 
   const getSmtpBadge = () => {
     if (smtpStatus === "SENT") {
@@ -33,6 +69,13 @@ export function EmailPreviewCard({
       return (
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase bg-[#ffe5e5] dark:bg-[#38181a] text-[#ea2b2b] dark:text-[#ff7a7a] border-2 border-[#ff4b4b]">
           <AlertCircle size={14} className="stroke-[3]" /> SMTP Failed
+        </span>
+      );
+    }
+    if (isAwaitingApproval) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase bg-[#fff2d6] dark:bg-[#382512] text-[#e58600] dark:text-[#ffaa33] border-2 border-[#ff9600]">
+          <CheckCheck size={14} className="stroke-[3]" /> Awaiting User Approval
         </span>
       );
     }
@@ -101,27 +144,90 @@ export function EmailPreviewCard({
           </div>
         </div>
 
-        <div className="space-y-2 text-xs font-mono">
+        {/* Email Headers Form / Display */}
+        <div className="space-y-2.5 text-xs font-mono">
           <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
             <span className="w-24 font-black text-[#777777] dark:text-[#a5b6be] uppercase text-[10px] shrink-0">From:</span>
             <span className="text-[#3c3c3c] dark:text-white font-black break-all">
               Rohan Phulkar &lt;hello@rohanphulkar.com&gt;
             </span>
           </div>
+
           <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
             <span className="w-24 font-black text-[#777777] dark:text-[#a5b6be] uppercase text-[10px] shrink-0">To:</span>
-            <span className="text-[#3c3c3c] dark:text-white font-black break-all">
-              {recruiterEmail || "Pending extraction..."}
-            </span>
+            {isEditingHeaders ? (
+              <input
+                type="email"
+                value={editedTo}
+                onChange={(e) => setEditedTo(e.target.value)}
+                placeholder="recruiter@company.com"
+                className="flex-1 p-2 rounded-xl bg-white dark:bg-[#1b2b32] border-2 border-[#1cb0f6] text-xs font-mono text-[#3c3c3c] dark:text-white"
+              />
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[#3c3c3c] dark:text-white font-black break-all">
+                  {recruiterEmail || "Pending extraction / manual input"}
+                </span>
+                {recruiterEmail && <CopyButton text={recruiterEmail} />}
+              </div>
+            )}
           </div>
+
           <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
             <span className="w-24 font-black text-[#777777] dark:text-[#a5b6be] uppercase text-[10px] shrink-0">Subject:</span>
-            <span className="text-[#3c3c3c] dark:text-white font-bold wrap-break-word">
-              {subject || "Pending composition..."}
-            </span>
+            {isEditingHeaders ? (
+              <input
+                type="text"
+                value={editedSubject}
+                onChange={(e) => setEditedSubject(e.target.value)}
+                placeholder="Application Subject..."
+                className="flex-1 p-2 rounded-xl bg-white dark:bg-[#1b2b32] border-2 border-[#1cb0f6] text-xs font-mono text-[#3c3c3c] dark:text-white"
+              />
+            ) : (
+              <span className="text-[#3c3c3c] dark:text-white font-bold wrap-break-word">
+                {subject || "Pending composition..."}
+              </span>
+            )}
           </div>
+
+          {/* Action buttons for editing headers */}
+          {isAwaitingApproval && onUpdateEmail && (
+            <div className="flex items-center justify-end gap-2 pt-1">
+              {!isEditingHeaders ? (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingHeaders(true)}
+                  className="duo-btn-secondary px-3 py-1 text-xs font-black flex items-center gap-1.5"
+                >
+                  <Edit3 size={13} className="stroke-[2.5]" /> Edit Recipient & Subject
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditedTo(recruiterEmail || "");
+                      setEditedSubject(subject || "");
+                      setIsEditingHeaders(false);
+                    }}
+                    className="duo-btn-secondary px-3 py-1 text-xs font-black"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveHeaders}
+                    className="duo-btn-primary px-4 py-1 text-xs font-black flex items-center gap-1.5"
+                  >
+                    <Save size={13} className="stroke-[2.5]" /> Save Headers
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
           {messageId && (
-            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 pt-1 border-t border-[#e5e5e5] dark:border-[#2e414c]">
               <span className="w-24 font-black text-[#777777] dark:text-[#a5b6be] uppercase text-[10px] shrink-0">Message-ID:</span>
               <span className="text-[#777777] dark:text-[#a5b6be] truncate max-w-md break-all">
                 {messageId}
@@ -129,6 +235,7 @@ export function EmailPreviewCard({
               <CopyButton text={messageId} label="Copy ID" />
             </div>
           )}
+
           {sentAt && (
             <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
               <span className="w-24 font-black text-[#777777] dark:text-[#a5b6be] uppercase text-[10px] shrink-0">Sent Date:</span>
@@ -140,7 +247,7 @@ export function EmailPreviewCard({
         </div>
       </div>
 
-      {/* View Toggle */}
+      {/* View Toggle Toolbar */}
       <div className="flex items-center justify-between px-6 py-3 border-b-2 border-[#e5e5e5] dark:border-[#2e414c] bg-white dark:bg-[#1b2b32]">
         <div className="flex items-center gap-2 text-xs">
           <button
@@ -192,35 +299,57 @@ export function EmailPreviewCard({
         )}
       </div>
 
-      {/* Attachment Card */}
-      {resumeUrls && resumeUrls.length > 0 && (
-        <div className="px-6 py-4 border-t-2 border-[#e5e5e5] dark:border-[#2e414c] bg-[#f7f9fa] dark:bg-[#233a44]">
-          <span className="text-[10px] font-black uppercase tracking-wider text-[#777777] dark:text-[#a5b6be] block mb-2">
-            ATTACHMENTS (1 FILE)
-          </span>
-          <div className="inline-flex items-center gap-3 p-3 bg-white dark:bg-[#1b2b32] border-2 border-[#e5e5e5] dark:border-[#2e414c] rounded-2xl shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-[#d7ffb8] dark:bg-[#1a3818] border-2 border-[#58cc02] text-[#58a700] dark:text-[#a5ed6e] flex items-center justify-center">
-              <FileText size={18} className="stroke-[2.5]" />
+      {/* Attachments & Action Footer */}
+      <div className="px-6 py-4 border-t-2 border-[#e5e5e5] dark:border-[#2e414c] bg-[#f7f9fa] dark:bg-[#233a44] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {resumeUrls && resumeUrls.length > 0 ? (
+          <div className="inline-flex items-center gap-3 p-2.5 bg-white dark:bg-[#1b2b32] border-2 border-[#e5e5e5] dark:border-[#2e414c] rounded-2xl shadow-xs">
+            <div className="w-9 h-9 rounded-xl bg-[#d7ffb8] dark:bg-[#1a3818] border-2 border-[#58cc02] text-[#58a700] dark:text-[#a5ed6e] flex items-center justify-center shrink-0">
+              <FileText size={16} className="stroke-[2.5]" />
             </div>
             <div>
               <span className="text-xs font-black text-[#3c3c3c] dark:text-white block">
                 Resume.pdf
               </span>
               <span className="text-[10px] font-bold text-[#777777] dark:text-[#a5b6be]">
-                Auto-attached to Outbound SMTP & Sent Folder
+                Ready for SMTP delivery
               </span>
             </div>
             <a
               href={resumeUrls[0]}
               target="_blank"
               rel="noopener noreferrer"
-              className="ml-4 duo-btn-primary px-3 py-1.5 text-xs font-black"
+              className="ml-3 duo-btn-primary px-3 py-1 text-xs font-black"
             >
-              OPEN PDF
+              PREVIEW
             </a>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="text-xs text-[#777777] dark:text-[#a5b6be] font-bold">
+            No resume attachment yet
+          </div>
+        )}
+
+        {isAwaitingApproval && onSend && (
+          <button
+            type="button"
+            onClick={onSend}
+            disabled={isSending}
+            className="duo-btn-primary px-6 py-3 text-xs font-black flex items-center justify-center gap-2 self-start sm:self-auto cursor-pointer disabled:opacity-50"
+          >
+            {isSending ? (
+              <>
+                <RotateCw size={15} className="animate-spin" />
+                <span>DISPATCHING SMTP EMAIL...</span>
+              </>
+            ) : (
+              <>
+                <Send size={15} className="stroke-[3]" />
+                <span>APPROVE & SEND EMAIL NOW</span>
+              </>
+            )}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

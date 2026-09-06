@@ -5,6 +5,14 @@ import mongoose from "mongoose";
  */
 const jobSchema = new mongoose.Schema(
   {
+    // Clerk user ID owning this job application
+    userId: {
+      type: String,
+      required: [true, "userId is required"],
+      default: "user_demo_applypilot",
+      index: true,
+    },
+
     // Unique human-readable or UUID identifier for the application job
     jobId: {
       type: String,
@@ -22,6 +30,8 @@ const jobSchema = new mongoose.Schema(
         "PARSING_JOB",
         "TAILORING_RESUME",
         "GENERATING_COVER_LETTER",
+        "READY_FOR_REVIEW",
+        "AWAITING_APPROVAL",
         "COMPOSING_EMAIL",
         "SENDING_EMAIL",
         "SAVING_TO_SENT",
@@ -38,10 +48,17 @@ const jobSchema = new mongoose.Schema(
       required: [true, "originalJobDescription is required"],
     },
 
-    // Structured job details extracted via OpenAI
+    // Optional screenshot metadata if uploaded as image
+    screenshot: {
+      filename: { type: String, default: null },
+      contentType: { type: String, default: null },
+    },
+
+    // Structured job details extracted via OpenAI / Vision
     parsedJob: {
       title: { type: String, default: null, index: true },
       company: { type: String, default: null, index: true },
+      recruiterName: { type: String, default: null },
       location: { type: String, default: null },
       employmentType: { type: String, default: null },
 
@@ -76,6 +93,10 @@ const jobSchema = new mongoose.Schema(
       urls: {
         type: [String],
         default: [],
+      },
+      filename: {
+        type: String,
+        default: null,
       },
     },
 
@@ -142,7 +163,7 @@ const jobSchema = new mongoose.Schema(
     timeline: [
       {
         stage: { type: String, required: true },
-        status: { type: String, required: true }, // e.g. "QUEUED", "STARTED", "COMPLETED", "FAILED"
+        status: { type: String, required: true }, // e.g. "QUEUED", "STARTED", "COMPLETED", "FAILED", "READY_FOR_REVIEW"
         message: { type: String, required: true },
         createdAt: { type: Date, default: Date.now },
       },
@@ -160,6 +181,8 @@ const jobSchema = new mongoose.Schema(
 );
 
 // Compound / single indexes for queries & sorting
+jobSchema.index({ userId: 1, createdAt: -1 });
+jobSchema.index({ userId: 1, status: 1, createdAt: -1 });
 jobSchema.index({ createdAt: -1 });
 jobSchema.index({ status: 1, createdAt: -1 });
 jobSchema.index({ "parsedJob.title": "text", "parsedJob.company": "text" });
